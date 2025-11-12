@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Анализатор репортов</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+            --light-bg: #f8f9fa;
+            --dark-bg: #343a40;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: var(--light-bg);
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 1rem 0;
+            margin-bottom: 2rem;
+        }
+        
+        header h1 {
+            text-align: center;
+            font-size: 2rem;
+        }
+        
+        .upload-section {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .upload-area {
+            border: 2px dashed #ccc;
+            border-radius: 5px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .upload-area:hover {
+            border-color: var(--secondary-color);
+            background-color: #f0f8ff;
+        }
+        
+        .upload-area.dragover {
+            border-color: var(--secondary-color);
+            background-color: #e6f7ff;
+        }
+        
+        .upload-btn {
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.3s;
+        }
+        
+        .upload-btn:hover {
+            background-color: #2980b9;
+        }
+        
+        .filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .filter-group {
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        .filter-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        .filter-group select, .filter-group input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .filter-group .multiselect {
+            height: 120px;
+            overflow-y: auto;
+        }
+        
+        .filter-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .filter-btn {
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        
+        .filter-btn:hover {
+            background-color: #5a6268;
+        }
+        
+        .admin-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .admin-card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .admin-header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .admin-name {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        
+        .report-count {
+            background-color: var(--secondary-color);
+            color: white;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+        }
+        
+        .admin-stats {
+            display: flex;
+            justify-content: space-around;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+        
+        .stat-label {
+            font-size: 0.8rem;
+            color: #666;
+        }
+        
+        .reports-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .report-item {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+            transition: background-color 0.2s;
+            cursor: pointer;
+        }
+        
+        .report-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .report-item.copied {
+            background-color: #d4edda;
+            transition: background-color 0.5s;
+        }
+        
+        .report-time {
+            font-size: 0.8rem;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .report-player {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .report-question {
+            margin-bottom: 5px;
+            font-style: italic;
+        }
+        
+        .report-answer {
+            margin-bottom: 8px;
+        }
+        
+        .report-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+        
+        .tag {
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: bold;
+        }
+        
+        .tag-observation {
+            background-color: var(--warning-color);
+            color: white;
+        }
+        
+        .tag-solving {
+            background-color: var(--success-color);
+            color: white;
+        }
+        
+        .tag-chat {
+            background-color: var(--secondary-color);
+            color: white;
+        }
+        
+        .tag-transfer {
+            background-color: #9b59b6;
+            color: white;
+        }
+        
+        .tag-punishment {
+            background-color: var(--danger-color);
+            color: white;
+        }
+        
+        .tag-instruction {
+            background-color: #1abc9c;
+            color: white;
+        }
+        
+        .summary-section {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .summary-card {
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            padding: 15px;
+            text-align: center;
+        }
+        
+        .summary-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .summary-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #333;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 1000;
+        }
+        
+        .toast.show {
+            opacity: 1;
+        }
+        
+        @media (max-width: 768px) {
+            .admin-cards {
+                grid-template-columns: 1fr;
+            }
+            
+            .filters {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Анализатор репортов администраторов</h1>
+        </div>
+    </header>
+    
+    <div class="container">
+        <section class="upload-section">
+            <h2>Загрузка файла с логами</h2>
+            <div class="upload-area" id="uploadArea">
+                <p>Перетащите файл сюда или нажмите для выбора</p>
+                <input type="file" id="fileInput" accept=".txt" class="hidden">
+            </div>
+            <button class="upload-btn" id="uploadBtn">Загрузить файл</button>
+        </section>
+        
+        <section class="filters hidden" id="filtersSection">
+            <div class="filter-group">
+                <label for="adminFilter">Фильтр по администратору</label>
+                <select id="adminFilter" class="multiselect" multiple>
+                    <option value="all">Все администраторы</option>
+                </select>
+                <div class="filter-actions">
+                    <button class="filter-btn" id="selectAllAdmins">Выбрать всех</button>
+                    <button class="filter-btn" id="deselectAllAdmins">Сбросить</button>
+                </div>
+            </div>
+            <div class="filter-group">
+                <label for="tagFilter">Фильтр по тегу</label>
+                <select id="tagFilter" class="multiselect" multiple>
+                    <option value="all">Все теги</option>
+                    <option value="observation">Наблюдение</option>
+                    <option value="solving">Решение жалобы</option>
+                    <option value="chat">Ответ в чат</option>
+                    <option value="transfer">Передача репорта</option>
+                    <option value="punishment">Наказание</option>
+                    <option value="instruction">Инструкция</option>
+                </select>
+                <div class="filter-actions">
+                    <button class="filter-btn" id="selectAllTags">Выбрать все</button>
+                    <button class="filter-btn" id="deselectAllTags">Сбросить</button>
+                </div>
+            </div>
+            <div class="filter-group">
+                <label for="searchFilter">Поиск по тексту</label>
+                <input type="text" id="searchFilter" placeholder="Введите текст для поиска...">
+            </div>
+        </section>
+        
+        <section class="summary-section hidden" id="summarySection">
+            <h2>Сводная статистика</h2>
+            <div class="summary-grid" id="summaryGrid">
+                <!-- Сводная информация будет добавлена здесь -->
+            </div>
+        </section>
+        
+        <section class="admin-cards" id="adminCards">
+            <!-- Карточки администраторов будут добавлены здесь -->
+        </section>
+    </div>
+    
+    <div class="toast" id="toast">Текст скопирован в буфер обмена</div>
+
+    <script>
+        // Основные переменные
+        let reportsData = [];
+        let adminsData = {};
+        let currentFilter = {
+            admins: ['all'],
+            tags: ['all'],
+            search: ''
+        };
+
+        // Элементы DOM
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const filtersSection = document.getElementById('filtersSection');
+        const summarySection = document.getElementById('summarySection');
+        const adminCards = document.getElementById('adminCards');
+        const adminFilter = document.getElementById('adminFilter');
+        const tagFilter = document.getElementById('tagFilter');
+        const searchFilter = document.getElementById('searchFilter');
+        const summaryGrid = document.getElementById('summaryGrid');
+        const selectAllAdmins = document.getElementById('selectAllAdmins');
+        const deselectAllAdmins = document.getElementById('deselectAllAdmins');
+        const selectAllTags = document.getElementById('selectAllTags');
+        const deselectAllTags = document.getElementById('deselectAllTags');
+        const toast = document.getElementById('toast');
+
+        // Обработчики событий
+        uploadArea.addEventListener('click', () => fileInput.click());
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            if (e.dataTransfer.files.length) {
+                fileInput.files = e.dataTransfer.files;
+                processFile(e.dataTransfer.files[0]);
+            }
+        });
+        uploadBtn.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length) {
+                processFile(e.target.files[0]);
+            }
+        });
+        
+        adminFilter.addEventListener('change', (e) => {
+            currentFilter.admins = Array.from(e.target.selectedOptions).map(option => option.value);
+            updateDisplay();
+        });
+        
+        tagFilter.addEventListener('change', (e) => {
+            currentFilter.tags = Array.from(e.target.selectedOptions).map(option => option.value);
+            updateDisplay();
+        });
+        
+        searchFilter.addEventListener('input', (e) => {
+            currentFilter.search = e.target.value.toLowerCase();
+            updateDisplay();
+        });
+        
+        selectAllAdmins.addEventListener('click', () => {
+            const options = Array.from(adminFilter.options);
+            options.forEach(option => option.selected = true);
+            currentFilter.admins = options.map(option => option.value);
+            updateDisplay();
+        });
+        
+        deselectAllAdmins.addEventListener('click', () => {
+            adminFilter.value = '';
+            currentFilter.admins = ['all'];
+            updateDisplay();
+        });
+        
+        selectAllTags.addEventListener('click', () => {
+            const options = Array.from(tagFilter.options);
+            options.forEach(option => option.selected = true);
+            currentFilter.tags = options.map(option => option.value);
+            updateDisplay();
+        });
+        
+        deselectAllTags.addEventListener('click', () => {
+            tagFilter.value = '';
+            currentFilter.tags = ['all'];
+            updateDisplay();
+        });
+
+        // Функция показа уведомления
+        function showToast(message) {
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2000);
+        }
+
+        // Функция обработки файла
+        function processFile(file) {
+            if (!file.name.endsWith('.txt')) {
+                alert('Пожалуйста, выберите файл с расширением .txt');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const content = e.target.result;
+                parseFileContent(content);
+                filtersSection.classList.remove('hidden');
+                summarySection.classList.remove('hidden');
+            };
+            reader.readAsText(file);
+        }
+
+        // Функция парсинга содержимого файла
+        function parseFileContent(content) {
+            reportsData = [];
+            adminsData = {};
+            
+            const lines = content.split('\n');
+            
+            lines.forEach(line => {
+                if (!line.trim()) return;
+                
+                // Сохраняем исходную строку
+                const rawLine = line.trim();
+                
+                // Регулярное выражение для извлечения данных из строки
+                const regex = /(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) Администратор (\S+) ответил на репорт (\S+): Вопрос: (.+?) \| Ответ: (.+)$/;
+                const pmRegex = /(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) Администратор (\S+) ответил в pm игроку (\S+): (.+) \(Чат\)$/;
+                
+                let match = regex.exec(rawLine);
+                let isPM = false;
+                
+                if (!match) {
+                    match = pmRegex.exec(rawLine);
+                    isPM = true;
+                }
+                
+                if (match) {
+                    const [, time, admin, player, question, answer] = match;
+                    
+                    const report = {
+                        time,
+                        admin,
+                        player,
+                        question: isPM ? '' : question,
+                        answer: isPM ? question : answer,
+                        isPM,
+                        tags: determineTags(isPM ? question : answer, isPM),
+                        raw: rawLine // Сохраняем исходную строку
+                    };
+                    
+                    reportsData.push(report);
+                    
+                    // Группировка по администраторам
+                    if (!adminsData[admin]) {
+                        adminsData[admin] = {
+                            name: admin,
+                            reports: [],
+                            stats: {
+                                total: 0,
+                                observation: 0,
+                                solving: 0,
+                                chat: 0,
+                                transfer: 0,
+                                punishment: 0,
+                                instruction: 0
+                            }
+                        };
+                    }
+                    
+                    adminsData[admin].reports.push(report);
+                    adminsData[admin].stats.total++;
+                    
+                    // Обновление статистики по тегам
+                    report.tags.forEach(tag => {
+                        if (adminsData[admin].stats[tag] !== undefined) {
+                            adminsData[admin].stats[tag]++;
+                        }
+                    });
+                }
+            });
+            
+            updateFilters();
+            updateSummary();
+            updateDisplay();
+        }
+
+        // Функция определения тегов на основе ответа
+        function determineTags(answer, isPM) {
+            const tags = [];
+            const lowerAnswer = answer.toLowerCase();
+            
+            // Если это личное сообщение (PM), всегда добавляем тег "chat"
+            if (isPM) {
+                tags.push('chat');
+            }
+            
+            if (lowerAnswer.includes('начинаю слежку') || 
+                lowerAnswer.includes('слежу') || 
+                lowerAnswer.includes('прослежу')) {
+                tags.push('observation');
+            }
+            
+            if (lowerAnswer.includes('начинаю работать по вашей жалобе') || 
+                lowerAnswer.includes('работаю по жалобе') ||
+                lowerAnswer.includes('помогаю')) {
+                tags.push('solving');
+            }
+            
+            if (lowerAnswer.includes('передал ваш репорт другим администраторам') ||
+                lowerAnswer.includes('передал репорт')) {
+                tags.push('transfer');
+            }
+            
+            if (lowerAnswer.includes('наказан') || 
+                lowerAnswer.includes('накажем') ||
+                lowerAnswer.includes('мут') ||
+                lowerAnswer.includes('забанить')) {
+                tags.push('punishment');
+            }
+            
+            if (lowerAnswer.includes('/') || 
+                lowerAnswer.includes('команда') ||
+                lowerAnswer.includes('нажмите') ||
+                lowerAnswer.includes('используйте')) {
+                tags.push('instruction');
+            }
+            
+            return tags;
+        }
+
+        // Обновление фильтров
+        function updateFilters() {
+            // Очистка существующих опций (кроме первой "Все администраторы")
+            while (adminFilter.options.length > 1) {
+                adminFilter.remove(1);
+            }
+            
+            // Добавление администраторов в фильтр
+            Object.keys(adminsData).forEach(admin => {
+                const option = document.createElement('option');
+                option.value = admin;
+                option.textContent = admin;
+                adminFilter.appendChild(option);
+            });
+        }
+
+        // Обновление сводной статистики
+        function updateSummary() {
+            const totalReports = reportsData.length;
+            const totalAdmins = Object.keys(adminsData).length;
+            
+            // Подсчет тегов
+            const tagCounts = {
+                observation: 0,
+                solving: 0,
+                chat: 0,
+                transfer: 0,
+                punishment: 0,
+                instruction: 0
+            };
+            
+            reportsData.forEach(report => {
+                report.tags.forEach(tag => {
+                    if (tagCounts[tag] !== undefined) {
+                        tagCounts[tag]++;
+                    }
+                });
+            });
+            
+            // Создание элементов сводной статистики
+            summaryGrid.innerHTML = `
+                <div class="summary-card">
+                    <div class="summary-value">${totalReports}</div>
+                    <div class="summary-label">Всего репортов</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-value">${totalAdmins}</div>
+                    <div class="summary-label">Администраторов</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-value">${tagCounts.observation}</div>
+                    <div class="summary-label">Наблюдений</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-value">${tagCounts.solving}</div>
+                    <div class="summary-label">Решений жалоб</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-value">${tagCounts.chat}</div>
+                    <div class="summary-label">Ответов в чат</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-value">${tagCounts.transfer}</div>
+                    <div class="summary-label">Передач репортов</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-value">${tagCounts.punishment}</div>
+                    <div class="summary-label">Наказаний</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-value">${tagCounts.instruction}</div>
+                    <div class="summary-label">Инструкций</div>
+                </div>
+            `;
+        }
+
+        // Обновление отображения
+        function updateDisplay() {
+            adminCards.innerHTML = '';
+            
+            // Фильтрация данных
+            let filteredAdmins = {};
+            
+            Object.keys(adminsData).forEach(adminName => {
+                // Фильтр по администраторам
+                if (currentFilter.admins.length > 0 && !currentFilter.admins.includes('all') && 
+                    !currentFilter.admins.includes(adminName)) {
+                    return;
+                }
+                
+                const admin = adminsData[adminName];
+                const filteredReports = admin.reports.filter(report => {
+                    // Фильтр по тегам
+                    if (currentFilter.tags.length > 0 && !currentFilter.tags.includes('all')) {
+                        const hasMatchingTag = report.tags.some(tag => currentFilter.tags.includes(tag));
+                        if (!hasMatchingTag) {
+                            return false;
+                        }
+                    }
+                    
+                    // Фильтр по поиску
+                    if (currentFilter.search) {
+                        const searchText = currentFilter.search;
+                        const searchableText = (
+                            report.player + ' ' + 
+                            report.question + ' ' + 
+                            report.answer
+                        ).toLowerCase();
+                        
+                        if (!searchableText.includes(searchText)) {
+                            return false;
+                        }
+                    }
+                    
+                    return true;
+                });
+                
+                if (filteredReports.length > 0) {
+                    filteredAdmins[adminName] = {
+                        ...admin,
+                        reports: filteredReports
+                    };
+                }
+            });
+            
+            // Создание карточек администраторов
+            Object.values(filteredAdmins).forEach(admin => {
+                const adminCard = document.createElement('div');
+                adminCard.className = 'admin-card';
+                
+                const adminHeader = document.createElement('div');
+                adminHeader.className = 'admin-header';
+                
+                const adminName = document.createElement('div');
+                adminName.className = 'admin-name';
+                adminName.textContent = admin.name;
+                
+                const reportCount = document.createElement('div');
+                reportCount.className = 'report-count';
+                reportCount.textContent = admin.reports.length;
+                
+                adminHeader.appendChild(adminName);
+                adminHeader.appendChild(reportCount);
+                
+                const adminStats = document.createElement('div');
+                adminStats.className = 'admin-stats';
+                
+                // Статистика по тегам
+                const tagStats = {
+                    observation: 0,
+                    solving: 0,
+                    chat: 0
+                };
+                
+                admin.reports.forEach(report => {
+                    report.tags.forEach(tag => {
+                        if (tagStats[tag] !== undefined) {
+                            tagStats[tag]++;
+                        }
+                    });
+                });
+                
+                adminStats.innerHTML = `
+                    <div class="stat-item">
+                        <div class="stat-value">${tagStats.observation}</div>
+                        <div class="stat-label">Наблюдений</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${tagStats.solving}</div>
+                        <div class="stat-label">Решений</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${tagStats.chat}</div>
+                        <div class="stat-label">Чатов</div>
+                    </div>
+                `;
+                
+                const reportsList = document.createElement('div');
+                reportsList.className = 'reports-list';
+                
+                // Добавление репортов
+                admin.reports.forEach(report => {
+                    const reportItem = document.createElement('div');
+                    reportItem.className = 'report-item';
+                    
+                    const reportTime = document.createElement('div');
+                    reportTime.className = 'report-time';
+                    reportTime.textContent = report.time;
+                    
+                    const reportPlayer = document.createElement('div');
+                    reportPlayer.className = 'report-player';
+                    reportPlayer.textContent = report.player || 'PM';
+                    
+                    const reportQuestion = document.createElement('div');
+                    reportQuestion.className = 'report-question';
+                    reportQuestion.textContent = report.question || '(Личное сообщение)';
+                    
+                    const reportAnswer = document.createElement('div');
+                    reportAnswer.className = 'report-answer';
+                    reportAnswer.textContent = report.answer;
+                    
+                    const reportTags = document.createElement('div');
+                    reportTags.className = 'report-tags';
+                    
+                    report.tags.forEach(tag => {
+                        const tagElement = document.createElement('span');
+                        tagElement.className = `tag tag-${tag}`;
+                        
+                        // Русские названия для тегов
+                        const tagNames = {
+                            observation: 'Наблюдение',
+                            solving: 'Решение',
+                            chat: 'Чат',
+                            transfer: 'Передача',
+                            punishment: 'Наказание',
+                            instruction: 'Инструкция'
+                        };
+                        
+                        tagElement.textContent = tagNames[tag] || tag;
+                        reportTags.appendChild(tagElement);
+                    });
+                    
+                    reportItem.appendChild(reportTime);
+                    reportItem.appendChild(reportPlayer);
+                    
+                    if (report.question) {
+                        reportItem.appendChild(reportQuestion);
+                    }
+                    
+                    reportItem.appendChild(reportAnswer);
+                    reportItem.appendChild(reportTags);
+                    
+                    // Обработчик двойного клика для копирования
+                    reportItem.addEventListener('dblclick', () => {
+                        // Копируем исходную строку из лога
+                        copyToClipboard(report.raw);
+                        
+                        // Визуальная обратная связь
+                        reportItem.classList.add('copied');
+                        setTimeout(() => {
+                            reportItem.classList.remove('copied');
+                        }, 1000);
+                        
+                        showToast('Исходная строка скопирована в буфер обмена');
+                    });
+                    
+                    reportsList.appendChild(reportItem);
+                });
+                
+                adminCard.appendChild(adminHeader);
+                adminCard.appendChild(adminStats);
+                adminCard.appendChild(reportsList);
+                
+                adminCards.appendChild(adminCard);
+            });
+        }
+
+        // Копирование текста в буфер обмена
+        function copyToClipboard(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+        }
+    </script>
+</body>
+</html>
