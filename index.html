@@ -1,1011 +1,1429 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Анализатор репортов</title>
-    <style>
-        :root {
-            --primary-color: #2c3e50;
-            --secondary-color: #3498db;
-            --success-color: #27ae60;
-            --warning-color: #f39c12;
-            --danger-color: #e74c3c;
-            --light-bg: #f8f9fa;
-            --dark-bg: #343a40;
-            --text-color: #333;
-            --card-bg: white;
-            --border-color: #ddd;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Анализатор репортов</title>
 
-        .dark-theme {
-            --primary-color: #1a1a2e;
-            --secondary-color: #3498db;
-            --success-color: #27ae60;
-            --warning-color: #f39c12;
-            --danger-color: #e74c3c;
-            --light-bg: #121212;
-            --dark-bg: #0d0d0d;
-            --text-color: #e0e0e0;
-            --card-bg: #1e1e1e;
-            --border-color: #333;
-        }
-        
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-        
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            color: var(--text-color);
-            background-color: var(--light-bg);
-            transition: background-color 0.3s, color 0.3s;
-        }
-        
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        
-        header {
-            background-color: var(--primary-color);
-            color: white;
-            padding: 1rem 0;
-            margin-bottom: 2rem;
-            position: relative;
-        }
-        
-        .header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        header h1 {
-            font-size: 2rem;
-        }
-        
-        .theme-toggle {
-            background: none;
-            border: none;
-            color: white;
-            cursor: pointer;
-            font-size: 1.5rem;
-            padding: 5px 10px;
-            border-radius: 5px;
-            transition: background-color 0.3s;
-        }
-        
-        .theme-toggle:hover {
-            background-color: rgba(255, 255, 255, 0.1);
-        }
-        
-        .upload-section {
-            background-color: var(--card-bg);
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            transition: background-color 0.3s;
-        }
-        
-        .upload-area {
-            border: 2px dashed var(--border-color);
-            border-radius: 5px;
-            padding: 30px;
-            text-align: center;
-            margin-bottom: 15px;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        
-        .upload-area:hover {
-            border-color: var(--secondary-color);
-            background-color: rgba(52, 152, 219, 0.05);
-        }
-        
-        .upload-area.dragover {
-            border-color: var(--secondary-color);
-            background-color: rgba(52, 152, 219, 0.1);
-        }
-        
-        .upload-btn {
-            background-color: var(--secondary-color);
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 1rem;
-            transition: background-color 0.3s;
-        }
-        
-        .upload-btn:hover {
-            background-color: #2980b9;
-        }
-        
-        .filters {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        
-        .filter-group {
-            flex: 1;
-            min-width: 200px;
-        }
-        
-        .filter-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-        
-        .filter-group select, .filter-group input {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            background-color: var(--card-bg);
-            color: var(--text-color);
-            transition: border-color 0.3s, background-color 0.3s, color 0.3s;
-        }
-        
-        .filter-group .multiselect {
-            height: 120px;
-            overflow-y: auto;
-        }
-        
-        .filter-actions {
-            display: flex;
-            gap: 10px;
-            margin-top: 10px;
-        }
-        
-        .filter-btn {
-            background-color: #6c757d;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.8rem;
-        }
-        
-        .filter-btn:hover {
-            background-color: #5a6268;
-        }
-        
-        .admin-cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 20px;
-        }
-        
-        .admin-card {
-            background-color: var(--card-bg);
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            overflow: hidden;
-            transition: background-color 0.3s;
-        }
-        
-        .admin-header {
-            background-color: var(--primary-color);
-            color: white;
-            padding: 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .admin-name {
-            font-size: 1.2rem;
-            font-weight: bold;
-        }
-        
-        .report-count {
-            background-color: var(--secondary-color);
-            color: white;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.9rem;
-        }
-        
-        .admin-stats {
-            display: flex;
-            justify-content: space-around;
-            padding: 10px;
-            background-color: rgba(0,0,0,0.05);
-            border-bottom: 1px solid var(--border-color);
-            transition: background-color 0.3s, border-color 0.3s;
-        }
-        
-        .stat-item {
-            text-align: center;
-        }
-        
-        .stat-value {
-            font-weight: bold;
-            font-size: 1.1rem;
-        }
-        
-        .stat-label {
-            font-size: 0.8rem;
-            color: #666;
-        }
-        
-        .dark-theme .stat-label {
-            color: #aaa;
-        }
-        
-        .reports-list {
-            max-height: 400px;
-            overflow-y: auto;
-        }
-        
-        .report-item {
-            padding: 12px 15px;
-            border-bottom: 1px solid var(--border-color);
-            transition: background-color 0.2s, border-color 0.3s;
-            cursor: pointer;
-        }
-        
-        .report-item:hover {
-            background-color: rgba(0,0,0,0.03);
-        }
-        
-        .dark-theme .report-item:hover {
-            background-color: rgba(255,255,255,0.05);
-        }
-        
-        .report-item.copied {
-            background-color: rgba(39, 174, 96, 0.2);
-            transition: background-color 0.5s;
-        }
-        
-        .report-time {
-            font-size: 0.8rem;
-            color: #666;
-            margin-bottom: 5px;
-        }
-        
-        .dark-theme .report-time {
-            color: #aaa;
-        }
-        
-        .report-player {
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-        
-        .report-question {
-            margin-bottom: 5px;
-            font-style: italic;
-        }
-        
-        .report-answer {
-            margin-bottom: 8px;
-        }
-        
-        .report-tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 5px;
-        }
-        
-        .tag {
-            padding: 3px 8px;
-            border-radius: 12px;
-            font-size: 0.7rem;
-            font-weight: bold;
-        }
-        
-        .tag-observation {
-            background-color: var(--warning-color);
-            color: white;
-        }
-        
-        .tag-solving {
-            background-color: var(--success-color);
-            color: white;
-        }
-        
-        .tag-chat {
-            background-color: var(--secondary-color);
-            color: white;
-        }
-        
-        .tag-transfer {
-            background-color: #9b59b6;
-            color: white;
-        }
-        
-        .tag-punishment {
-            background-color: var(--danger-color);
-            color: white;
-        }
-        
-        .tag-instruction {
-            background-color: #1abc9c;
-            color: white;
-        }
-        
-        .summary-section {
-            background-color: var(--card-bg);
-            border-radius: 8px;
-            padding: 20px;
-            margin-top: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            transition: background-color 0.3s;
-        }
-        
-        .summary-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-top: 15px;
-        }
-        
-        .summary-card {
-            background-color: rgba(0,0,0,0.05);
-            border-radius: 5px;
-            padding: 15px;
-            text-align: center;
-            transition: background-color 0.3s;
-        }
-        
-        .dark-theme .summary-card {
-            background-color: rgba(255,255,255,0.05);
-        }
-        
-        .summary-value {
-            font-size: 1.5rem;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-        
-        .summary-label {
-            color: #666;
-            font-size: 0.9rem;
-        }
-        
-        .dark-theme .summary-label {
-            color: #aaa;
-        }
-        
-        .hidden {
-            display: none;
-        }
-        
-        .toast {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background-color: #333;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 5px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-            opacity: 0;
-            transition: opacity 0.3s;
-            z-index: 1000;
-        }
-        
-        .toast.show {
-            opacity: 1;
-        }
-        
-        @media (max-width: 768px) {
-            .admin-cards {
-                grid-template-columns: 1fr;
-            }
-            
-            .filters {
-                flex-direction: column;
-            }
-            
-            .header-content {
-                flex-direction: column;
-                gap: 10px;
-            }
-        }
-    </style>
+  <style>
+    /* =========================================================
+       Glassmorphism 2.0 + Cyberpunk (Tokyo Night palette)
+       Функционал НЕ трогаем: id/DOM/JS те же
+       ========================================================= */
+
+    :root{
+      /* Tokyo Night Core */
+      --bg-1:#070914;
+      --bg-2:#0a0f22;
+      --bg-3:#0b1430;
+      --bg-4:#0f1b3e;
+
+      --neon-cyan:#09d6ff;
+      --neon-violet:#4c2eff;
+      --neon-magenta:#c66bff;
+      --neon-blue:#2aa7ff;
+
+      /* Glass */
+      --glass: rgba(255,255,255,0.06);
+      --glass-strong: rgba(255,255,255,0.10);
+      --glass-ultra: rgba(255,255,255,0.14);
+      --glass-border: rgba(255,255,255,0.16);
+      --glass-border-strong: rgba(255,255,255,0.22);
+
+      /* Text */
+      --text:#e9eefb;
+      --muted:#aab6d6;
+      --muted-2:#7f8db3;
+
+      /* Status */
+      --success:#23d18b;
+      --warning:#ffb454;
+      --danger:#ff6b6b;
+
+      /* Radius */
+      --radius-xl:20px;
+      --radius-lg:16px;
+      --radius-md:12px;
+
+      /* Shadows / blur */
+      --shadow-soft: 0 10px 35px rgba(0,0,0,0.5);
+      --shadow-card: 0 8px 24px rgba(0,0,0,0.38);
+      --shadow-neon: 0 0 22px rgba(9,214,255,0.25), 0 0 44px rgba(76,46,255,0.22);
+      --blur: 16px;
+
+      /* Motion */
+      --ease-out:cubic-bezier(.16,.84,.44,1);
+      --ease-in:cubic-bezier(.7,.02,.84,.2);
+    }
+
+    *{ box-sizing:border-box; margin:0; padding:0; }
+    body{
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      line-height:1.55;
+      color:var(--text);
+      min-height:100vh;
+      overflow-x:hidden;
+
+      /* Cyber glass night background */
+      background:
+        radial-gradient(1100px 800px at 10% -10%, rgba(76,46,255,0.35) 0%, transparent 60%),
+        radial-gradient(900px 600px at 110% 0%, rgba(9,214,255,0.30) 0%, transparent 55%),
+        radial-gradient(1200px 900px at 50% 120%, rgba(198,107,255,0.16) 0%, transparent 60%),
+        linear-gradient(180deg, var(--bg-1), var(--bg-2) 40%, var(--bg-3) 70%, var(--bg-4));
+    }
+
+    /* animated “aurora” overlay */
+    body::before{
+      content:"";
+      position:fixed; inset:-20%;
+      background:
+        conic-gradient(from 0deg,
+          rgba(9,214,255,0.10),
+          rgba(76,46,255,0.12),
+          rgba(198,107,255,0.10),
+          rgba(42,167,255,0.10),
+          rgba(9,214,255,0.10));
+      filter: blur(70px) saturate(140%);
+      animation: auroraSpin 18s linear infinite;
+      z-index:-2;
+      opacity:.9;
+      transform: translateZ(0);
+    }
+    @keyframes auroraSpin{
+      to{ transform: rotate(360deg); }
+    }
+
+    /* subtle scanlines */
+    body::after{
+      content:"";
+      position:fixed; inset:0;
+      background:
+        repeating-linear-gradient(
+          to bottom,
+          rgba(255,255,255,0.02),
+          rgba(255,255,255,0.02) 1px,
+          transparent 1px,
+          transparent 3px
+        );
+      mix-blend-mode: soft-light;
+      pointer-events:none;
+      z-index:-1;
+      opacity:.25;
+    }
+
+    .container{
+      max-width:1200px;
+      margin:0 auto;
+      padding:18px;
+    }
+
+    header{
+      position: sticky;
+      top:0;
+      z-index:10;
+      padding:14px 0;
+      margin-bottom:18px;
+      background:
+        linear-gradient(90deg, rgba(7,9,20,0.9), rgba(10,15,34,0.82));
+      border-bottom:1px solid var(--glass-border);
+      backdrop-filter: blur(var(--blur));
+    }
+    header h1{
+      text-align:center;
+      font-weight:900;
+      font-size: clamp(1.3rem, 2.6vw, 2.15rem);
+      letter-spacing:0.6px;
+      text-shadow:
+        0 2px 12px rgba(0,0,0,.55),
+        0 0 18px rgba(76,46,255,0.35);
+      background: linear-gradient(90deg, #fff, #cfe3ff 35%, #e8d4ff 70%, #fff);
+      -webkit-background-clip:text;
+      background-clip:text;
+      color:transparent;
+    }
+
+    /* Sections */
+    .upload-section,
+    .summary-section{
+      background: var(--glass);
+      border:1px solid var(--glass-border);
+      border-radius: var(--radius-xl);
+      padding:16px;
+      box-shadow: var(--shadow-soft);
+      backdrop-filter: blur(var(--blur));
+      position:relative;
+      overflow:hidden;
+      isolation:isolate;
+    }
+    /* neon rim */
+    .upload-section::before,
+    .summary-section::before{
+      content:"";
+      position:absolute; inset:-1px;
+      background:
+        linear-gradient(135deg,
+          rgba(9,214,255,0.55),
+          rgba(76,46,255,0.55),
+          rgba(198,107,255,0.45));
+      opacity:.13;
+      z-index:-1;
+      filter: blur(18px);
+    }
+
+    .upload-section{ margin-bottom:14px; }
+
+    .upload-section h2,
+    .summary-section h2{
+      font-size:1.12rem;
+      font-weight:800;
+      margin-bottom:10px;
+      color:#f3f6ff;
+      letter-spacing:.3px;
+      text-shadow: 0 0 10px rgba(9,214,255,0.18);
+    }
+
+    /* Upload area */
+    .upload-area{
+      border:1.8px dashed rgba(255,255,255,0.30);
+      border-radius: var(--radius-lg);
+      padding:28px 16px;
+      text-align:center;
+      margin-bottom:12px;
+      cursor:pointer;
+      transition:0.28s var(--ease-out);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.03), rgba(0,0,0,0.25)),
+        radial-gradient(400px 120px at 50% -10%, rgba(9,214,255,0.16), transparent 60%);
+      position:relative;
+      overflow:hidden;
+    }
+    .upload-area p{
+      color:var(--muted);
+      font-size:1rem;
+      font-weight:600;
+    }
+    .upload-area::after{
+      content:"";
+      position:absolute; inset:0;
+      background:
+        linear-gradient(120deg, transparent 0%, rgba(255,255,255,0.12) 45%, transparent 65%);
+      transform: translateX(-120%);
+      transition:0.6s var(--ease-out);
+      opacity:.35;
+      pointer-events:none;
+    }
+    .upload-area:hover{
+      border-color: rgba(9,214,255,0.9);
+      background:
+        linear-gradient(180deg, rgba(9,214,255,0.08), rgba(0,0,0,0.28)),
+        radial-gradient(600px 220px at 50% -20%, rgba(76,46,255,0.24), transparent 60%);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-neon);
+    }
+    .upload-area:hover::after{
+      transform: translateX(120%);
+    }
+    .upload-area.dragover{
+      border-color: rgba(76,46,255,0.95);
+      background: rgba(76,46,255,0.12);
+      box-shadow: 0 0 0 3px rgba(76,46,255,0.18), var(--shadow-neon);
+    }
+
+    /* Buttons */
+    .upload-btn,
+    .filter-btn,
+    .glass-btn{
+      border:none;
+      cursor:pointer;
+      font-weight:800;
+      letter-spacing:.25px;
+      transition:0.22s var(--ease-out);
+      position:relative;
+      overflow:hidden;
+    }
+
+    .upload-btn{
+      width:100%;
+      padding:12px 14px;
+      border-radius: 14px;
+      color:white;
+      background:
+        linear-gradient(135deg, rgba(9,214,255,0.95), rgba(76,46,255,0.95));
+      box-shadow:
+        0 10px 26px rgba(9,214,255,0.30),
+        0 8px 22px rgba(76,46,255,0.28);
+      text-shadow:0 1px 8px rgba(0,0,0,0.45);
+    }
+    .upload-btn::after{
+      content:"";
+      position:absolute; inset:0;
+      background: linear-gradient(120deg, transparent, rgba(255,255,255,0.25), transparent);
+      transform: translateX(-120%);
+      transition:0.7s var(--ease-out);
+      opacity:.8;
+    }
+    .upload-btn:hover{
+      transform: translateY(-2px);
+      filter:brightness(1.06) saturate(115%);
+      box-shadow:
+        0 0 20px rgba(9,214,255,0.4),
+        0 0 34px rgba(76,46,255,0.35),
+        0 12px 30px rgba(0,0,0,0.45);
+    }
+    .upload-btn:hover::after{ transform: translateX(120%); }
+
+    /* Glass buttons */
+    .glass-btn{
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.04));
+      color:#f8fbff;
+      border:1px solid var(--glass-border);
+      padding:10px 14px;
+      border-radius: 14px;
+      backdrop-filter: blur(12px);
+      box-shadow: var(--shadow-card);
+      font-size:0.96rem;
+    }
+    .glass-btn:hover{
+      transform: translateY(-2px);
+      border-color: rgba(9,214,255,0.8);
+      box-shadow: var(--shadow-neon);
+    }
+    .glass-btn.cancel{
+      background: linear-gradient(180deg, rgba(255,107,107,0.18), rgba(255,107,107,0.06));
+      border-color: rgba(255,107,107,0.45);
+    }
+    .glass-btn.cancel:hover{
+      border-color: rgba(255,107,107,0.9);
+      box-shadow: 0 0 18px rgba(255,107,107,0.35);
+    }
+
+    /* Filters */
+    .filters{
+      margin-top:12px;
+      padding:12px;
+      border-radius: var(--radius-xl);
+      background: var(--glass);
+      border:1px solid var(--glass-border);
+      box-shadow: var(--shadow-card);
+      backdrop-filter: blur(var(--blur));
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin-bottom:14px;
+
+      animation: fadeUp .45s var(--ease-out) both;
+    }
+
+    .filter-group{
+      flex:1;
+      min-width: 220px;
+    }
+    .filter-group label{
+      display:block;
+      margin-bottom:6px;
+      font-weight:800;
+      font-size:0.92rem;
+      color:#e6edff;
+      letter-spacing:.2px;
+      text-shadow:0 0 8px rgba(76,46,255,0.22);
+    }
+    .filter-group select,
+    .filter-group input{
+      width:100%;
+      padding:9px 10px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,0.18);
+      background:
+        linear-gradient(180deg, rgba(0,0,0,0.35), rgba(0,0,0,0.2));
+      color:var(--text);
+      outline:none;
+      transition:0.2s var(--ease-out);
+      box-shadow: inset 0 0 0 1px rgba(9,214,255,0.04);
+    }
+    .filter-group select:focus,
+    .filter-group input:focus{
+      border-color: rgba(76,46,255,0.9);
+      box-shadow:
+        0 0 0 3px rgba(76,46,255,0.18),
+        0 0 16px rgba(9,214,255,0.18);
+    }
+    .filter-group .multiselect{
+      height:120px;
+      overflow:auto;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(9,214,255,0.6) transparent;
+    }
+    .filter-group .multiselect::-webkit-scrollbar{
+      width:8px;
+    }
+    .filter-group .multiselect::-webkit-scrollbar-thumb{
+      background: linear-gradient(180deg, rgba(9,214,255,0.8), rgba(76,46,255,0.8));
+      border-radius:999px;
+    }
+    .filter-actions{
+      display:flex;
+      gap:6px;
+      margin-top:8px;
+    }
+
+    .filter-btn{
+      flex:1;
+      padding:7px 8px;
+      border-radius:10px;
+      font-size:0.82rem;
+      color:#e9eefb;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+      border:1px solid rgba(255,255,255,0.16);
+      text-shadow:0 1px 6px rgba(0,0,0,0.45);
+    }
+    .filter-btn:hover{
+      background:
+        linear-gradient(180deg, rgba(9,214,255,0.12), rgba(76,46,255,0.10));
+      border-color: rgba(9,214,255,0.7);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-neon);
+    }
+
+    /* Summary */
+    .summary-section{
+      margin-top:0;
+      margin-bottom:14px;
+      animation: fadeUp .45s var(--ease-out) both;
+    }
+    .summary-grid{
+      display:grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px,1fr));
+      gap:10px;
+      margin-top:10px;
+    }
+    .summary-card{
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.08), rgba(0,0,0,0.25));
+      border:1px solid rgba(255,255,255,0.14);
+      border-radius:16px;
+      padding:12px;
+      text-align:center;
+      backdrop-filter: blur(10px);
+      position:relative;
+      overflow:hidden;
+      transition:.25s var(--ease-out);
+    }
+    .summary-card::before{
+      content:"";
+      position:absolute; inset:-40% -20% auto -20%;
+      height:120%;
+      background: radial-gradient(320px 140px at 50% 0%, rgba(9,214,255,0.22), transparent 60%);
+      opacity:.9;
+      z-index:0;
+    }
+    .summary-card:hover{
+      transform: translateY(-2px);
+      border-color: rgba(9,214,255,0.75);
+      box-shadow: var(--shadow-neon);
+    }
+    .summary-value{
+      position:relative; z-index:1;
+      font-size:1.7rem;
+      font-weight:900;
+      margin-bottom:2px;
+      background: linear-gradient(90deg, #fff, #cfe3ff 45%, #e8d4ff);
+      -webkit-background-clip:text;
+      background-clip:text;
+      color:transparent;
+      text-shadow: 0 0 18px rgba(9,214,255,0.25);
+    }
+    .summary-label{
+      position:relative; z-index:1;
+      color:var(--muted);
+      font-size:0.9rem;
+      font-weight:700;
+      letter-spacing:.2px;
+    }
+
+    /* Admin cards */
+    .admin-cards{
+      display:grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px,1fr));
+      gap:12px;
+    }
+    .admin-card{
+      background: var(--glass);
+      border:1px solid var(--glass-border);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-card);
+      backdrop-filter: blur(var(--blur));
+      overflow:hidden;
+      transition:0.25s var(--ease-out);
+      position:relative;
+      animation: cardIn .45s var(--ease-out) both;
+    }
+    @keyframes cardIn{
+      from{ opacity:0; transform: translateY(8px) scale(.985); }
+      to{ opacity:1; transform: translateY(0) scale(1); }
+    }
+    .admin-card::after{
+      content:"";
+      position:absolute; inset:0;
+      background:
+        linear-gradient(140deg, rgba(9,214,255,0.10), transparent 40%),
+        linear-gradient(320deg, rgba(76,46,255,0.12), transparent 55%);
+      pointer-events:none;
+    }
+    .admin-card:hover{
+      transform: translateY(-3px);
+      border-color: var(--glass-border-strong);
+      box-shadow:
+        0 0 26px rgba(9,214,255,0.25),
+        0 0 52px rgba(76,46,255,0.22),
+        var(--shadow-card);
+    }
+
+    .admin-header{
+      background:
+        linear-gradient(135deg,
+          rgba(9,214,255,0.26),
+          rgba(76,46,255,0.26),
+          rgba(198,107,255,0.22)),
+        rgba(0,0,0,0.45);
+      color:white;
+      padding:12px 14px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      border-bottom:1px solid rgba(255,255,255,0.12);
+      position:relative;
+    }
+    .admin-header::before{
+      content:"";
+      position:absolute; left:0; top:0; right:0; height:2px;
+      background: linear-gradient(90deg, var(--neon-cyan), var(--neon-violet), var(--neon-magenta));
+      opacity:.9;
+      box-shadow: var(--shadow-neon);
+    }
+    .admin-name{
+      font-size:1.08rem;
+      font-weight:900;
+      letter-spacing:0.4px;
+      text-shadow:
+        0 0 10px rgba(9,214,255,0.25),
+        0 0 12px rgba(76,46,255,0.25);
+    }
+    .report-count{
+      background:
+        radial-gradient(100% 100% at 30% 10%, rgba(255,255,255,0.9), transparent 60%),
+        linear-gradient(135deg, var(--neon-cyan), var(--neon-violet));
+      color:#07101f;
+      border-radius:999px;
+      min-width:34px;
+      height:34px;
+      padding:0 10px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:0.95rem;
+      font-weight:900;
+      box-shadow:
+        0 0 18px rgba(9,214,255,0.55),
+        0 0 18px rgba(76,46,255,0.45);
+    }
+
+    .admin-stats{
+      display:flex;
+      justify-content:space-around;
+      padding:9px 8px;
+      background: rgba(0,0,0,0.32);
+      border-bottom:1px solid rgba(255,255,255,0.08);
+    }
+    .stat-item{text-align:center;}
+    .stat-value{
+      font-weight:900;
+      font-size:1.08rem;
+      color:#f2f6ff;
+      text-shadow:0 0 12px rgba(9,214,255,0.18);
+    }
+    .stat-label{
+      font-size:0.76rem;
+      color:var(--muted);
+      font-weight:700;
+      letter-spacing:.2px;
+    }
+
+    .reports-list{
+      max-height:420px;
+      overflow:auto;
+      padding:6px;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(76,46,255,0.7) transparent;
+    }
+    .reports-list::-webkit-scrollbar{ width:8px; }
+    .reports-list::-webkit-scrollbar-thumb{
+      background: linear-gradient(180deg, rgba(76,46,255,0.9), rgba(9,214,255,0.9));
+      border-radius:999px;
+    }
+
+    .report-item{
+      padding:10px 10px;
+      margin:6px;
+      border-radius:14px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.06), rgba(0,0,0,0.32));
+      border:1px solid rgba(255,255,255,0.10);
+      transition:0.22s var(--ease-out);
+      cursor:pointer;
+      position:relative;
+      overflow:hidden;
+    }
+    .report-item::after{
+      content:"";
+      position:absolute; left:-60%; top:-80%;
+      width:140%; height:180%;
+      background: radial-gradient(220px 120px at 50% 50%, rgba(9,214,255,0.12), transparent 60%);
+      transform: rotate(12deg);
+      opacity:.8;
+      pointer-events:none;
+    }
+    .report-item:hover{
+      background:
+        linear-gradient(180deg, rgba(9,214,255,0.08), rgba(0,0,0,0.34));
+      border-color: rgba(9,214,255,0.5);
+      transform: translateY(-1px);
+      box-shadow: 0 0 14px rgba(9,214,255,0.22);
+    }
+    .report-item.copied{
+      background: rgba(35,209,139,0.16);
+      border-color: rgba(35,209,139,0.55);
+      box-shadow: 0 0 18px rgba(35,209,139,0.25);
+    }
+
+    .report-time{
+      font-size:0.76rem;
+      color:var(--muted-2);
+      margin-bottom:4px;
+      font-weight:700;
+      letter-spacing:.2px;
+    }
+    .report-player{
+      font-weight:900;
+      margin-bottom:4px;
+      color:#f6f8ff;
+      text-shadow:0 0 10px rgba(76,46,255,0.18);
+    }
+    .report-question{
+      margin-bottom:4px;
+      font-style:italic;
+      color:#d7ddf3;
+      font-size:0.96rem;
+    }
+    .report-answer{
+      margin-bottom:7px;
+      font-size:1rem;
+      color:#f0f3ff;
+      white-space:pre-wrap;
+      word-break:break-word;
+    }
+
+    .report-tags{
+      display:flex;
+      flex-wrap:wrap;
+      gap:6px;
+      margin-top:4px;
+    }
+    .tag{
+      padding:4px 9px;
+      border-radius:999px;
+      font-size:0.72rem;
+      font-weight:900;
+      letter-spacing:.3px;
+      border:1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.04);
+      text-shadow: 0 1px 6px rgba(0,0,0,0.35);
+    }
+    .tag-observation{ background: rgba(255,180,84,0.18); color:#ffd9a3; border-color: rgba(255,180,84,0.55);}
+    .tag-solving{ background: rgba(35,209,139,0.18); color:#b8f7dd; border-color: rgba(35,209,139,0.55);}
+    .tag-chat{ background: rgba(57,208,255,0.18); color:#bfefff; border-color: rgba(57,208,255,0.65);}
+    .tag-transfer{ background: rgba(155,89,182,0.20); color:#e9c8ff; border-color: rgba(155,89,182,0.6);}
+    .tag-punishment{ background: rgba(255,107,107,0.18); color:#ffc4c4; border-color: rgba(255,107,107,0.6);}
+    .tag-instruction{ background: rgba(26,188,156,0.18); color:#bff6ea; border-color: rgba(26,188,156,0.6);}
+
+    /* Toast */
+    .toast{
+      position:fixed;
+      bottom:18px;
+      right:18px;
+      background:
+        linear-gradient(180deg, rgba(10,12,18,0.95), rgba(10,12,18,0.8));
+      color:white;
+      padding:10px 14px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,0.16);
+      box-shadow:
+        var(--shadow-soft),
+        0 0 18px rgba(9,214,255,0.22);
+      opacity:0;
+      transform: translateY(8px) scale(.98);
+      transition:0.28s var(--ease-out);
+      z-index:1000;
+      backdrop-filter: blur(10px);
+      font-weight:800;
+      font-size:0.96rem;
+    }
+    .toast.show{
+      opacity:1;
+      transform: translateY(0) scale(1);
+    }
+
+    .hidden{ display:none; }
+
+    /* Calendar modal */
+    .glass-modal{
+      position:fixed;
+      inset:0;
+      background:
+        radial-gradient(900px 600px at 50% -10%, rgba(9,214,255,0.16), transparent 60%),
+        rgba(0,0,0,0.6);
+      backdrop-filter: blur(8px);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index:9999;
+      padding:12px;
+      animation: fadeIn .25s var(--ease-out);
+    }
+    .glass-modal.show{ display:flex; }
+
+    .glass-modal-content{
+      width:min(380px, 100%);
+      background:
+        linear-gradient(180deg, rgba(15,20,40,0.95), rgba(8,10,18,0.92));
+      border:1px solid var(--glass-border);
+      border-radius:18px;
+      padding:16px;
+      color:white;
+      box-shadow:
+        var(--shadow-soft),
+        0 0 26px rgba(76,46,255,0.28);
+      backdrop-filter: blur(12px);
+      position:relative;
+      overflow:hidden;
+      animation: popIn .28s var(--ease-out);
+    }
+    .glass-modal-content::before{
+      content:"";
+      position:absolute; inset:-1px;
+      background: linear-gradient(135deg, rgba(9,214,255,0.6), rgba(76,46,255,0.6), rgba(198,107,255,0.55));
+      opacity:.10;
+      filter: blur(16px);
+      z-index:-1;
+    }
+    .glass-modal-content h3{
+      margin-bottom:10px;
+      font-size:1.18rem;
+      text-align:center;
+      font-weight:900;
+      letter-spacing:.3px;
+      text-shadow:0 0 12px rgba(9,214,255,0.25);
+    }
+    #datePicker{
+      width:100%;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,0.20);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.04));
+      color:#fff;
+      outline:none;
+      margin-bottom:12px;
+      font-weight:800;
+      letter-spacing:.2px;
+    }
+    .glass-modal-actions{
+      display:flex;
+      gap:8px;
+      justify-content:center;
+    }
+
+    /* Animations */
+    @keyframes fadeUp{
+      from{ opacity:0; transform: translateY(6px); }
+      to{ opacity:1; transform: translateY(0); }
+    }
+    @keyframes fadeIn{
+      from{ opacity:0; }
+      to{ opacity:1; }
+    }
+    @keyframes popIn{
+      from{ opacity:0; transform: translateY(8px) scale(.98); }
+      to{ opacity:1; transform: translateY(0) scale(1); }
+    }
+
+    /* Responsive */
+    @media (max-width:768px){
+      .admin-cards{ grid-template-columns:1fr; }
+      .filters{ flex-direction:column; }
+      .container{ padding:12px; }
+    }
+  </style>
 </head>
-<body>
-    <header>
-        <div class="container">
-            <div class="header-content">
-                <h1>Анализатор репортов администраторов</h1>
-                <button class="theme-toggle" id="themeToggle" title="Переключить тему">🌙</button>
-            </div>
-        </div>
-    </header>
-    
-    <div class="container">
-        <section class="upload-section">
-            <h2>Загрузка файла с логами</h2>
-            <div class="upload-area" id="uploadArea">
-                <p>Перетащите файл сюда или нажмите для выбора</p>
-                <input type="file" id="fileInput" accept=".txt" class="hidden">
-            </div>
-            <button class="upload-btn" id="uploadBtn">Загрузить файл</button>
-        </section>
-        
-        <section class="filters hidden" id="filtersSection">
-            <div class="filter-group">
-                <label for="adminFilter">Фильтр по администратору</label>
-                <select id="adminFilter" class="multiselect" multiple>
-                    <option value="all">Все администраторы</option>
-                </select>
-                <div class="filter-actions">
-                    <button class="filter-btn" id="selectAllAdmins">Выбрать всех</button>
-                    <button class="filter-btn" id="deselectAllAdmins">Сбросить</button>
-                </div>
-            </div>
-            <div class="filter-group">
-                <label for="tagFilter">Фильтр по тегу</label>
-                <select id="tagFilter" class="multiselect" multiple>
-                    <option value="all">Все теги</option>
-                    <option value="observation">Наблюдение</option>
-                    <option value="solving">Решение жалобы</option>
-                    <option value="chat">Ответ в чат</option>
-                    <option value="transfer">Передача репорта</option>
-                    <option value="punishment">Наказание</option>
-                    <option value="instruction">Инструкция</option>
-                </select>
-                <div class="filter-actions">
-                    <button class="filter-btn" id="selectAllTags">Выбрать все</button>
-                    <button class="filter-btn" id="deselectAllTags">Сбросить</button>
-                </div>
-            </div>
-            <div class="filter-group">
-                <label for="searchFilter">Поиск по тексту</label>
-                <input type="text" id="searchFilter" placeholder="Введите текст для поиска...">
-            </div>
-        </section>
-        
-        <section class="summary-section hidden" id="summarySection">
-            <h2>Сводная статистика</h2>
-            <div class="summary-grid" id="summaryGrid">
-                <!-- Сводная информация будет добавлена здесь -->
-            </div>
-        </section>
-        
-        <section class="admin-cards" id="adminCards">
-            <!-- Карточки администраторов будут добавлены здесь -->
-        </section>
-    </div>
-    
-    <div class="toast" id="toast">Текст скопирован в буфер обмена</div>
 
-    <script>
-        // Основные переменные
-        let reportsData = [];
-        let adminsData = {};
-        let currentFilter = {
-            admins: ['all'],
-            tags: ['all'],
-            search: ''
+<body>
+  <header>
+    <div class="container">
+      <h1>Анализатор репортов администраторов</h1>
+    </div>
+  </header>
+
+  <div class="container">
+    <section class="upload-section">
+      <h2>Загрузка файла с логами</h2>
+
+      <!-- ✅ ДОБАВЛЕННАЯ КНОПКА (ID тот же) -->
+      <div style="margin: 8px 0 14px 0;">
+        <button id="openDateModal" class="glass-btn">Выбрать дату и открыть ВК</button>
+      </div>
+
+      <div class="upload-area" id="uploadArea">
+        <p>Перетащите файл сюда или нажмите для выбора</p>
+        <input type="file" id="fileInput" accept=".txt" class="hidden">
+      </div>
+      <button class="upload-btn" id="uploadBtn">Загрузить файл</button>
+    </section>
+
+    <section class="filters hidden" id="filtersSection">
+      <div class="filter-group">
+        <label for="adminFilter">Фильтр по администратору</label>
+        <select id="adminFilter" class="multiselect" multiple>
+          <option value="all">Все администраторы</option>
+        </select>
+        <div class="filter-actions">
+          <button class="filter-btn" id="selectAllAdmins">Выбрать всех</button>
+          <button class="filter-btn" id="deselectAllAdmins">Сбросить</button>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <label for="tagFilter">Фильтр по тегу</label>
+        <select id="tagFilter" class="multiselect" multiple>
+          <option value="all">Все теги</option>
+          <option value="observation">Наблюдение</option>
+          <option value="solving">Решение жалобы</option>
+          <option value="chat">Ответ в чат</option>
+          <option value="transfer">Передача репорта</option>
+          <option value="punishment">Наказание</option>
+          <option value="instruction">Инструкция</option>
+        </select>
+        <div class="filter-actions">
+          <button class="filter-btn" id="selectAllTags">Выбрать все</button>
+          <button class="filter-btn" id="deselectAllTags">Сбросить</button>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <label for="searchFilter">Поиск по тексту</label>
+        <input type="text" id="searchFilter" placeholder="Введите текст для поиска...">
+      </div>
+    </section>
+
+    <section class="summary-section hidden" id="summarySection">
+      <h2>Сводная статистика</h2>
+      <div class="summary-grid" id="summaryGrid"></div>
+    </section>
+
+    <section class="admin-cards" id="adminCards"></section>
+  </div>
+
+  <!-- ✅ МОДАЛКА С КАЛЕНДАРЁМ -->
+  <div id="dateModal" class="glass-modal">
+    <div class="glass-modal-content">
+      <h3>Выберите дату</h3>
+      <input type="date" id="datePicker">
+      <div class="glass-modal-actions">
+        <button id="confirmDate" class="glass-btn">Продолжить</button>
+        <button id="closeModal" class="glass-btn cancel">Отмена</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast">Текст скопирован в буфер обмена</div>
+
+  <script>
+    // Основные переменные
+    let reportsData = [];
+    let adminsData = {};
+    let currentFilter = {
+        admins: ['all'],
+        tags: ['all'],
+        search: ''
+    };
+
+    // Элементы DOM
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const filtersSection = document.getElementById('filtersSection');
+    const summarySection = document.getElementById('summarySection');
+    const adminCards = document.getElementById('adminCards');
+    const adminFilter = document.getElementById('adminFilter');
+    const tagFilter = document.getElementById('tagFilter');
+    const searchFilter = document.getElementById('searchFilter');
+    const summaryGrid = document.getElementById('summaryGrid');
+    const selectAllAdmins = document.getElementById('selectAllAdmins');
+    const deselectAllAdmins = document.getElementById('deselectAllAdmins');
+    const selectAllTags = document.getElementById('selectAllTags');
+    const deselectAllTags = document.getElementById('deselectAllTags');
+    const toast = document.getElementById('toast');
+
+    // ✅ Элементы для календаря/ВК
+    const modal = document.getElementById("dateModal");
+    const openDateModalBtn = document.getElementById("openDateModal");
+    const closeModalBtn = document.getElementById("closeModal");
+    const confirmDateBtn = document.getElementById("confirmDate");
+    const datePicker = document.getElementById("datePicker");
+    const VK_CHAT_URL = "https://vk.com/im/convo/-223392392?entrypoint=list_all";
+
+    // Обработчики событий
+    uploadArea.addEventListener('click', () => fileInput.click());
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.classList.add('dragover');
+    });
+    uploadArea.addEventListener('dragleave', () => {
+        uploadArea.classList.remove('dragover');
+    });
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+        if (e.dataTransfer.files.length) {
+            fileInput.files = e.dataTransfer.files;
+            processFile(e.dataTransfer.files[0]);
+        }
+    });
+    uploadBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length) {
+            processFile(e.target.files[0]);
+        }
+    });
+
+    adminFilter.addEventListener('change', (e) => {
+        currentFilter.admins = Array.from(e.target.selectedOptions).map(option => option.value);
+        updateDisplay();
+    });
+
+    tagFilter.addEventListener('change', (e) => {
+        currentFilter.tags = Array.from(e.target.selectedOptions).map(option => option.value);
+        updateDisplay();
+    });
+
+    searchFilter.addEventListener('input', (e) => {
+        currentFilter.search = e.target.value.toLowerCase();
+        updateDisplay();
+    });
+
+    selectAllAdmins.addEventListener('click', () => {
+        const options = Array.from(adminFilter.options);
+        options.forEach(option => option.selected = true);
+        currentFilter.admins = options.map(option => option.value);
+        updateDisplay();
+    });
+
+    deselectAllAdmins.addEventListener('click', () => {
+        adminFilter.value = '';
+        currentFilter.admins = ['all'];
+        updateDisplay();
+    });
+
+    selectAllTags.addEventListener('click', () => {
+        const options = Array.from(tagFilter.options);
+        options.forEach(option => option.selected = true);
+        currentFilter.tags = options.map(option => option.value);
+        updateDisplay();
+    });
+
+    deselectAllTags.addEventListener('click', () => {
+        tagFilter.value = '';
+        currentFilter.tags = ['all'];
+        updateDisplay();
+    });
+
+    // Функция показа уведомления
+    function showToast(message) {
+        toast.textContent = message;
+        toast.classList.add('show');
+        setTimeout(() => {
+            toast.classList.remove('show');
+        }, 2000);
+    }
+
+    // Функция обработки файла
+    function processFile(file) {
+        if (!file.name.endsWith('.txt')) {
+            alert('Пожалуйста, выберите файл с расширением .txt');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const content = e.target.result;
+            parseFileContent(content);
+            filtersSection.classList.remove('hidden');
+            summarySection.classList.remove('hidden');
+        };
+        reader.readAsText(file);
+    }
+    // Функция парсинга содержимого файла (с объединением PM + репорт)
+    function parseFileContent(content) {
+        reportsData = [];
+        adminsData = {};
+
+        const lines = content.split('\n').map(l => l.trim()).filter(Boolean);
+
+        // ---- helpers ----
+        const toTs = (t) => {
+            // t = 'YYYY-MM-DD HH:MM:SS'
+            const [d, time] = t.split(' ');
+            const [Y,M,D] = d.split('-').map(Number);
+            const [h,m,s] = time.split(':').map(Number);
+            return new Date(Y, M-1, D, h, m, s).getTime();
         };
 
-        // Элементы DOM
-        const uploadArea = document.getElementById('uploadArea');
-        const fileInput = document.getElementById('fileInput');
-        const uploadBtn = document.getElementById('uploadBtn');
-        const filtersSection = document.getElementById('filtersSection');
-        const summarySection = document.getElementById('summarySection');
-        const adminCards = document.getElementById('adminCards');
-        const adminFilter = document.getElementById('adminFilter');
-        const tagFilter = document.getElementById('tagFilter');
-        const searchFilter = document.getElementById('searchFilter');
-        const summaryGrid = document.getElementById('summaryGrid');
-        const selectAllAdmins = document.getElementById('selectAllAdmins');
-        const deselectAllAdmins = document.getElementById('deselectAllAdmins');
-        const selectAllTags = document.getElementById('selectAllTags');
-        const deselectAllTags = document.getElementById('deselectAllTags');
-        const toast = document.getElementById('toast');
-        const themeToggle = document.getElementById('themeToggle');
+        const regex = /(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) Администратор (\S+) ответил на репорт (\S+): Вопрос: (.+?) \| Ответ: (.+)$/;
+        const pmRegex = /(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) Администратор (\S+) ответил в pm игроку (\S+): (.+) \(Чат\)$/;
 
-        // Проверяем сохраненную тему
-        if (localStorage.getItem('darkTheme') === 'true') {
-            document.body.classList.add('dark-theme');
-            themeToggle.textContent = '☀️';
+        // Сначала разбираем все строки в "черновые" репорты
+        const drafts = [];
+        lines.forEach(rawLine => {
+            let match = regex.exec(rawLine);
+            let isPM = false;
+            if (!match) {
+                match = pmRegex.exec(rawLine);
+                isPM = true;
+            }
+            if (!match) return;
+
+            const [, time, admin, player, question, answer] = match;
+            const textForTags = isPM ? question : answer;
+
+            drafts.push({
+                time,
+                ts: toTs(time),
+                admin,
+                player,
+                question: isPM ? '' : question,
+                answer: isPM ? question : answer,
+                isPM,
+                tags: determineTags(textForTags, isPM),
+                raw: rawLine
+            });
+        });
+
+        // Сортируем по времени (на всякий)
+        drafts.sort((a,b)=>a.ts-b.ts);
+
+        // Объединяем пары "репорт + pm" в один репорт.
+        // Правило: один admin/player, разница <=1 сек, один isPM=false второй isPM=true.
+        const used = new Array(drafts.length).fill(false);
+
+        for (let i=0; i<drafts.length; i++){
+            if (used[i]) continue;
+            const a = drafts[i];
+
+            let merged = null;
+            let pairIndex = -1;
+
+            // ищем ближайшую пару впереди в пределах 1 сек
+            for (let j=i+1; j<drafts.length; j++){
+                if (used[j]) continue;
+                const b = drafts[j];
+                if (b.ts - a.ts > 1000) break; // дальше уже >1 сек
+
+                if (a.admin === b.admin && a.player === b.player && a.isPM !== b.isPM){
+                    // нашли пару
+                    pairIndex = j;
+
+                    const normal = a.isPM ? b : a;
+                    const pm = a.isPM ? a : b;
+
+                    merged = {
+                        time: normal.time,
+                        admin: normal.admin,
+                        player: normal.player,
+                        question: normal.question,
+                        answer: [normal.answer, pm.answer].filter(Boolean).join(' '),
+                        isPM: false,
+                        tags: Array.from(new Set([...(normal.tags||[]), ...(pm.tags||[])])),
+                        raw: `${normal.time} Администратор ${normal.admin} ответил на репорт ${normal.player}: Вопрос: ${normal.question} | Ответ: ${[normal.answer, pm.answer].filter(Boolean).join(' ')}`
+                    };
+                    used[j] = true;
+                    break;
+                }
+            }
+
+            used[i] = true;
+
+            const report = merged || {
+                time: a.time,
+                admin: a.admin,
+                player: a.player,
+                question: a.question,
+                answer: a.answer,
+                isPM: a.isPM,
+                tags: a.tags,
+                raw: a.raw
+            };
+
+            reportsData.push(report);
+
+            if (!adminsData[report.admin]) {
+                adminsData[report.admin] = {
+                    name: report.admin,
+                    reports: [],
+                    stats: {
+                        total: 0,
+                        observation: 0,
+                        solving: 0,
+                        chat: 0,
+                        transfer: 0,
+                        punishment: 0,
+                        instruction: 0
+                    }
+                };
+            }
+
+            adminsData[report.admin].reports.push(report);
+            adminsData[report.admin].stats.total++;
+
+            report.tags.forEach(tag => {
+                if (adminsData[report.admin].stats[tag] !== undefined) {
+                    adminsData[report.admin].stats[tag]++;
+                }
+            });
         }
 
-        // Обработчики событий
-        uploadArea.addEventListener('click', () => fileInput.click());
-        uploadArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            uploadArea.classList.add('dragover');
-        });
-        uploadArea.addEventListener('dragleave', () => {
-            uploadArea.classList.remove('dragover');
-        });
-        uploadArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            uploadArea.classList.remove('dragover');
-            if (e.dataTransfer.files.length) {
-                fileInput.files = e.dataTransfer.files;
-                processFile(e.dataTransfer.files[0]);
-            }
-        });
-        uploadBtn.addEventListener('click', () => fileInput.click());
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length) {
-                processFile(e.target.files[0]);
-            }
-        });
-        
-        adminFilter.addEventListener('change', (e) => {
-            currentFilter.admins = Array.from(e.target.selectedOptions).map(option => option.value);
-            updateDisplay();
-        });
-        
-        tagFilter.addEventListener('change', (e) => {
-            currentFilter.tags = Array.from(e.target.selectedOptions).map(option => option.value);
-            updateDisplay();
-        });
-        
-        searchFilter.addEventListener('input', (e) => {
-            currentFilter.search = e.target.value.toLowerCase();
-            updateDisplay();
-        });
-        
-        selectAllAdmins.addEventListener('click', () => {
-            const options = Array.from(adminFilter.options);
-            options.forEach(option => option.selected = true);
-            currentFilter.admins = options.map(option => option.value);
-            updateDisplay();
-        });
-        
-        deselectAllAdmins.addEventListener('click', () => {
-            adminFilter.value = '';
-            currentFilter.admins = ['all'];
-            updateDisplay();
-        });
-        
-        selectAllTags.addEventListener('click', () => {
-            const options = Array.from(tagFilter.options);
-            options.forEach(option => option.selected = true);
-            currentFilter.tags = options.map(option => option.value);
-            updateDisplay();
-        });
-        
-        deselectAllTags.addEventListener('click', () => {
-            tagFilter.value = '';
-            currentFilter.tags = ['all'];
-            updateDisplay();
-        });
+        updateFilters();
+        updateSummary();
+        updateDisplay();
+    }
 
-        // Переключение темы
-        themeToggle.addEventListener('click', () => {
-            document.body.classList.toggle('dark-theme');
-            const isDark = document.body.classList.contains('dark-theme');
-            themeToggle.textContent = isDark ? '☀️' : '🌙';
-            localStorage.setItem('darkTheme', isDark);
-        });
 
-        // Функция показа уведомления
-        function showToast(message) {
-            toast.textContent = message;
-            toast.classList.add('show');
-            setTimeout(() => {
-                toast.classList.remove('show');
-            }, 2000);
+    function determineTags(answer, isPM) {
+        const tags = [];
+        const lowerAnswer = answer.toLowerCase();
+
+        if (isPM) tags.push('chat');
+
+        if (lowerAnswer.includes('начинаю слежку') ||
+            lowerAnswer.includes('слежу') ||
+            lowerAnswer.includes('прослежу')) {
+            tags.push('observation');
         }
 
-        // Функция обработки файла
-        function processFile(file) {
-            if (!file.name.endsWith('.txt')) {
-                alert('Пожалуйста, выберите файл с расширением .txt');
+        if (lowerAnswer.includes('начинаю работать по вашей жалобе') ||
+            lowerAnswer.includes('работаю по жалобе') ||
+            lowerAnswer.includes('помогаю')) {
+            tags.push('solving');
+        }
+
+        if (lowerAnswer.includes('передал ваш репорт другим администраторам') ||
+            lowerAnswer.includes('передал репорт')) {
+            tags.push('transfer');
+        }
+
+        if (lowerAnswer.includes('наказан') ||
+            lowerAnswer.includes('накажем') ||
+            lowerAnswer.includes('мут') ||
+            lowerAnswer.includes('забанить')) {
+            tags.push('punishment');
+        }
+
+        if (lowerAnswer.includes('/') ||
+            lowerAnswer.includes('команда') ||
+            lowerAnswer.includes('нажмите') ||
+            lowerAnswer.includes('используйте')) {
+            tags.push('instruction');
+        }
+
+        return tags;
+    }
+
+    function updateFilters() {
+        while (adminFilter.options.length > 1) {
+            adminFilter.remove(1);
+        }
+
+        Object.keys(adminsData).forEach(admin => {
+            const option = document.createElement('option');
+            option.value = admin;
+            option.textContent = admin;
+            adminFilter.appendChild(option);
+        });
+    }
+
+    function updateSummary() {
+        const totalReports = reportsData.length;
+        const totalAdmins = Object.keys(adminsData).length;
+
+        const tagCounts = {
+            observation: 0,
+            solving: 0,
+            chat: 0,
+            transfer: 0,
+            punishment: 0,
+            instruction: 0
+        };
+
+        reportsData.forEach(report => {
+            report.tags.forEach(tag => {
+                if (tagCounts[tag] !== undefined) tagCounts[tag]++;
+            });
+        });
+
+        summaryGrid.innerHTML = `
+            <div class="summary-card">
+                <div class="summary-value">${totalReports}</div>
+                <div class="summary-label">Всего репортов</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-value">${totalAdmins}</div>
+                <div class="summary-label">Администраторов</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-value">${tagCounts.observation}</div>
+                <div class="summary-label">Наблюдений</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-value">${tagCounts.solving}</div>
+                <div class="summary-label">Решений жалоб</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-value">${tagCounts.chat}</div>
+                <div class="summary-label">Ответов в чат</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-value">${tagCounts.transfer}</div>
+                <div class="summary-label">Передач репортов</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-value">${tagCounts.punishment}</div>
+                <div class="summary-label">Наказаний</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-value">${tagCounts.instruction}</div>
+                <div class="summary-label">Инструкций</div>
+            </div>
+        `;
+    }
+
+    function updateDisplay() {
+        adminCards.innerHTML = '';
+
+        let filteredAdmins = {};
+
+        Object.keys(adminsData).forEach(adminName => {
+            if (currentFilter.admins.length > 0 && !currentFilter.admins.includes('all') &&
+                !currentFilter.admins.includes(adminName)) {
                 return;
             }
-            
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const content = e.target.result;
-                parseFileContent(content);
-                filtersSection.classList.remove('hidden');
-                summarySection.classList.remove('hidden');
-            };
-            reader.readAsText(file);
-        }
 
-        // Функция парсинга содержимого файла
-        function parseFileContent(content) {
-            reportsData = [];
-            adminsData = {};
-            
-            const lines = content.split('\n');
-            
-            lines.forEach(line => {
-                if (!line.trim()) return;
-                
-                // Сохраняем исходную строку
-                const rawLine = line.trim();
-                
-                // Регулярное выражение для извлечения данных из строки
-                const regex = /(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) Администратор (\S+) ответил на репорт (\S+): Вопрос: (.+?) \| Ответ: (.+)$/;
-                const pmRegex = /(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) Администратор (\S+) ответил в pm игроку (\S+): (.+) \(Чат\)$/;
-                
-                let match = regex.exec(rawLine);
-                let isPM = false;
-                
-                if (!match) {
-                    match = pmRegex.exec(rawLine);
-                    isPM = true;
+            const admin = adminsData[adminName];
+            const filteredReports = admin.reports.filter(report => {
+                if (currentFilter.tags.length > 0 && !currentFilter.tags.includes('all')) {
+                    const hasMatchingTag = report.tags.some(tag => currentFilter.tags.includes(tag));
+                    if (!hasMatchingTag) return false;
                 }
-                
-                if (match) {
-                    const [, time, admin, player, question, answer] = match;
-                    
-                    const report = {
-                        time,
-                        admin,
-                        player,
-                        question: isPM ? '' : question,
-                        answer: isPM ? question : answer,
-                        isPM,
-                        tags: determineTags(isPM ? question : answer, isPM),
-                        raw: rawLine // Сохраняем исходную строку
-                    };
-                    
-                    reportsData.push(report);
-                    
-                    // Группировка по администраторам
-                    if (!adminsData[admin]) {
-                        adminsData[admin] = {
-                            name: admin,
-                            reports: [],
-                            stats: {
-                                total: 0,
-                                observation: 0,
-                                solving: 0,
-                                chat: 0,
-                                transfer: 0,
-                                punishment: 0,
-                                instruction: 0
-                            }
-                        };
-                    }
-                    
-                    adminsData[admin].reports.push(report);
-                    adminsData[admin].stats.total++;
-                    
-                    // Обновление статистики по тегам
-                    report.tags.forEach(tag => {
-                        if (adminsData[admin].stats[tag] !== undefined) {
-                            adminsData[admin].stats[tag]++;
-                        }
-                    });
+
+                if (currentFilter.search) {
+                    const searchText = currentFilter.search;
+                    const searchableText = (
+                        report.player + ' ' +
+                        report.question + ' ' +
+                        report.answer
+                    ).toLowerCase();
+                    if (!searchableText.includes(searchText)) return false;
                 }
+                return true;
             });
-            
-            updateFilters();
-            updateSummary();
-            updateDisplay();
-        }
 
-        // Функция определения тегов на основе ответа
-        function determineTags(answer, isPM) {
-            const tags = [];
-            const lowerAnswer = answer.toLowerCase();
-            
-            // Если это личное сообщение (PM), всегда добавляем тег "chat"
-            if (isPM) {
-                tags.push('chat');
+            if (filteredReports.length > 0) {
+                filteredAdmins[adminName] = {
+                    ...admin,
+                    reports: filteredReports
+                };
             }
-            
-            if (lowerAnswer.includes('начинаю слежку') || 
-                lowerAnswer.includes('слежу') || 
-                lowerAnswer.includes('прослежу')) {
-                tags.push('observation');
-            }
-            
-            if (lowerAnswer.includes('начинаю работать по вашей жалобе') || 
-                lowerAnswer.includes('работаю по жалобе') ||
-                lowerAnswer.includes('помогаю')) {
-                tags.push('solving');
-            }
-            
-            if (lowerAnswer.includes('передал ваш репорт другим администраторам') ||
-                lowerAnswer.includes('передал репорт')) {
-                tags.push('transfer');
-            }
-            
-            if (lowerAnswer.includes('наказан') || 
-                lowerAnswer.includes('накажем') ||
-                lowerAnswer.includes('мут') ||
-                lowerAnswer.includes('забанить')) {
-                tags.push('punishment');
-            }
-            
-            if (lowerAnswer.includes('/') || 
-                lowerAnswer.includes('команда') ||
-                lowerAnswer.includes('нажмите') ||
-                lowerAnswer.includes('используйте')) {
-                tags.push('instruction');
-            }
-            
-            return tags;
-        }
+        });
 
-        // Обновление фильтров
-        function updateFilters() {
-            // Очистка существующих опций (кроме первой "Все администраторы")
-            while (adminFilter.options.length > 1) {
-                adminFilter.remove(1);
-            }
-            
-            // Добавление администраторов в фильтр
-            Object.keys(adminsData).forEach(admin => {
-                const option = document.createElement('option');
-                option.value = admin;
-                option.textContent = admin;
-                adminFilter.appendChild(option);
-            });
-        }
+        Object.values(filteredAdmins).forEach(admin => {
+            const adminCard = document.createElement('div');
+            adminCard.className = 'admin-card';
 
-        // Обновление сводной статистики
-        function updateSummary() {
-            const totalReports = reportsData.length;
-            const totalAdmins = Object.keys(adminsData).length;
-            
-            // Подсчет тегов
-            const tagCounts = {
-                observation: 0,
-                solving: 0,
-                chat: 0,
-                transfer: 0,
-                punishment: 0,
-                instruction: 0
-            };
-            
-            reportsData.forEach(report => {
+            const adminHeader = document.createElement('div');
+            adminHeader.className = 'admin-header';
+
+            const adminName = document.createElement('div');
+            adminName.className = 'admin-name';
+            adminName.textContent = admin.name;
+
+            const reportCount = document.createElement('div');
+            reportCount.className = 'report-count';
+            reportCount.textContent = admin.reports.length;
+
+            adminHeader.appendChild(adminName);
+            adminHeader.appendChild(reportCount);
+
+            const adminStats = document.createElement('div');
+            adminStats.className = 'admin-stats';
+
+            const tagStats = { observation: 0, solving: 0, chat: 0 };
+
+            admin.reports.forEach(report => {
                 report.tags.forEach(tag => {
-                    if (tagCounts[tag] !== undefined) {
-                        tagCounts[tag]++;
-                    }
+                    if (tagStats[tag] !== undefined) tagStats[tag]++;
                 });
             });
-            
-            // Создание элементов сводной статистики
-            summaryGrid.innerHTML = `
-                <div class="summary-card">
-                    <div class="summary-value">${totalReports}</div>
-                    <div class="summary-label">Всего репортов</div>
+
+            adminStats.innerHTML = `
+                <div class="stat-item">
+                    <div class="stat-value">${tagStats.observation}</div>
+                    <div class="stat-label">Наблюдений</div>
                 </div>
-                <div class="summary-card">
-                    <div class="summary-value">${totalAdmins}</div>
-                    <div class="summary-label">Администраторов</div>
+                <div class="stat-item">
+                    <div class="stat-value">${tagStats.solving}</div>
+                    <div class="stat-label">Решений</div>
                 </div>
-                <div class="summary-card">
-                    <div class="summary-value">${tagCounts.observation}</div>
-                    <div class="summary-label">Наблюдений</div>
-                </div>
-                <div class="summary-card">
-                    <div class="summary-value">${tagCounts.solving}</div>
-                    <div class="summary-label">Решений жалоб</div>
-                </div>
-                <div class="summary-card">
-                    <div class="summary-value">${tagCounts.chat}</div>
-                    <div class="summary-label">Ответов в чат</div>
-                </div>
-                <div class="summary-card">
-                    <div class="summary-value">${tagCounts.transfer}</div>
-                    <div class="summary-label">Передач репортов</div>
-                </div>
-                <div class="summary-card">
-                    <div class="summary-value">${tagCounts.punishment}</div>
-                    <div class="summary-label">Наказаний</div>
-                </div>
-                <div class="summary-card">
-                    <div class="summary-value">${tagCounts.instruction}</div>
-                    <div class="summary-label">Инструкций</div>
+                <div class="stat-item">
+                    <div class="stat-value">${tagStats.chat}</div>
+                    <div class="stat-label">Чатов</div>
                 </div>
             `;
-        }
 
-        // Обновление отображения
-        function updateDisplay() {
-            adminCards.innerHTML = '';
-            
-            // Фильтрация данных
-            let filteredAdmins = {};
-            
-            Object.keys(adminsData).forEach(adminName => {
-                // Фильтр по администраторам
-                if (currentFilter.admins.length > 0 && !currentFilter.admins.includes('all') && 
-                    !currentFilter.admins.includes(adminName)) {
-                    return;
-                }
-                
-                const admin = adminsData[adminName];
-                const filteredReports = admin.reports.filter(report => {
-                    // Фильтр по тегам
-                    if (currentFilter.tags.length > 0 && !currentFilter.tags.includes('all')) {
-                        const hasMatchingTag = report.tags.some(tag => currentFilter.tags.includes(tag));
-                        if (!hasMatchingTag) {
-                            return false;
-                        }
-                    }
-                    
-                    // Фильтр по поиску
-                    if (currentFilter.search) {
-                        const searchText = currentFilter.search;
-                        const searchableText = (
-                            report.player + ' ' + 
-                            report.question + ' ' + 
-                            report.answer
-                        ).toLowerCase();
-                        
-                        if (!searchableText.includes(searchText)) {
-                            return false;
-                        }
-                    }
-                    
-                    return true;
-                });
-                
-                if (filteredReports.length > 0) {
-                    filteredAdmins[adminName] = {
-                        ...admin,
-                        reports: filteredReports
+            const reportsList = document.createElement('div');
+            reportsList.className = 'reports-list';
+
+            admin.reports.forEach(report => {
+                const reportItem = document.createElement('div');
+                reportItem.className = 'report-item';
+
+                const reportTime = document.createElement('div');
+                reportTime.className = 'report-time';
+                reportTime.textContent = report.time;
+
+                const reportPlayer = document.createElement('div');
+                reportPlayer.className = 'report-player';
+                reportPlayer.textContent = report.player || 'PM';
+
+                const reportQuestion = document.createElement('div');
+                reportQuestion.className = 'report-question';
+                reportQuestion.textContent = report.question || '(Личное сообщение)';
+
+                const reportAnswer = document.createElement('div');
+                reportAnswer.className = 'report-answer';
+                reportAnswer.textContent = report.answer;
+
+                const reportTags = document.createElement('div');
+                reportTags.className = 'report-tags';
+
+                report.tags.forEach(tag => {
+                    const tagElement = document.createElement('span');
+                    tagElement.className = `tag tag-${tag}`;
+
+                    const tagNames = {
+                        observation: 'Наблюдение',
+                        solving: 'Решение',
+                        chat: 'Чат',
+                        transfer: 'Передача',
+                        punishment: 'Наказание',
+                        instruction: 'Инструкция'
                     };
-                }
-            });
-            
-            // Создание карточек администраторов
-            Object.values(filteredAdmins).forEach(admin => {
-                const adminCard = document.createElement('div');
-                adminCard.className = 'admin-card';
-                
-                const adminHeader = document.createElement('div');
-                adminHeader.className = 'admin-header';
-                
-                const adminName = document.createElement('div');
-                adminName.className = 'admin-name';
-                adminName.textContent = admin.name;
-                
-                const reportCount = document.createElement('div');
-                reportCount.className = 'report-count';
-                reportCount.textContent = admin.reports.length;
-                
-                adminHeader.appendChild(adminName);
-                adminHeader.appendChild(reportCount);
-                
-                const adminStats = document.createElement('div');
-                adminStats.className = 'admin-stats';
-                
-                // Статистика по тегам
-                const tagStats = {
-                    observation: 0,
-                    solving: 0,
-                    chat: 0
-                };
-                
-                admin.reports.forEach(report => {
-                    report.tags.forEach(tag => {
-                        if (tagStats[tag] !== undefined) {
-                            tagStats[tag]++;
-                        }
-                    });
+
+                    tagElement.textContent = tagNames[tag] || tag;
+                    reportTags.appendChild(tagElement);
                 });
-                
-                adminStats.innerHTML = `
-                    <div class="stat-item">
-                        <div class="stat-value">${tagStats.observation}</div>
-                        <div class="stat-label">Наблюдений</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">${tagStats.solving}</div>
-                        <div class="stat-label">Решений</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">${tagStats.chat}</div>
-                        <div class="stat-label">Чатов</div>
-                    </div>
-                `;
-                
-                const reportsList = document.createElement('div');
-                reportsList.className = 'reports-list';
-                
-                // Добавление репортов
-                admin.reports.forEach(report => {
-                    const reportItem = document.createElement('div');
-                    reportItem.className = 'report-item';
-                    
-                    const reportTime = document.createElement('div');
-                    reportTime.className = 'report-time';
-                    reportTime.textContent = report.time;
-                    
-                    const reportPlayer = document.createElement('div');
-                    reportPlayer.className = 'report-player';
-                    reportPlayer.textContent = report.player || 'PM';
-                    
-                    const reportQuestion = document.createElement('div');
-                    reportQuestion.className = 'report-question';
-                    reportQuestion.textContent = report.question || '(Личное сообщение)';
-                    
-                    const reportAnswer = document.createElement('div');
-                    reportAnswer.className = 'report-answer';
-                    reportAnswer.textContent = report.answer;
-                    
-                    const reportTags = document.createElement('div');
-                    reportTags.className = 'report-tags';
-                    
-                    report.tags.forEach(tag => {
-                        const tagElement = document.createElement('span');
-                        tagElement.className = `tag tag-${tag}`;
-                        
-                        // Русские названия для тегов
-                        const tagNames = {
-                            observation: 'Наблюдение',
-                            solving: 'Решение',
-                            chat: 'Чат',
-                            transfer: 'Передача',
-                            punishment: 'Наказание',
-                            instruction: 'Инструкция'
-                        };
-                        
-                        tagElement.textContent = tagNames[tag] || tag;
-                        reportTags.appendChild(tagElement);
-                    });
-                    
-                    reportItem.appendChild(reportTime);
-                    reportItem.appendChild(reportPlayer);
-                    
-                    if (report.question) {
-                        reportItem.appendChild(reportQuestion);
-                    }
-                    
-                    reportItem.appendChild(reportAnswer);
-                    reportItem.appendChild(reportTags);
-                    
-                    // Обработчик двойного клика для копирования
-                    reportItem.addEventListener('dblclick', () => {
-                        // Копируем исходную строку из лога
-                        copyToClipboard(report.raw);
-                        
-                        // Визуальная обратная связь
-                        reportItem.classList.add('copied');
-                        setTimeout(() => {
-                            reportItem.classList.remove('copied');
-                        }, 1000);
-                        
-                        showToast('Исходная строка скопирована в буфер обмена');
-                    });
-                    
-                    reportsList.appendChild(reportItem);
+
+                reportItem.appendChild(reportTime);
+                reportItem.appendChild(reportPlayer);
+
+                if (report.question) reportItem.appendChild(reportQuestion);
+
+                reportItem.appendChild(reportAnswer);
+                reportItem.appendChild(reportTags);
+
+                reportItem.addEventListener('dblclick', () => {
+                    copyToClipboard(report.raw);
+                    reportItem.classList.add('copied');
+                    setTimeout(() => reportItem.classList.remove('copied'), 1000);
+                    showToast('Исходная строка скопирована в буфер обмена');
                 });
-                
-                adminCard.appendChild(adminHeader);
-                adminCard.appendChild(adminStats);
-                adminCard.appendChild(reportsList);
-                
-                adminCards.appendChild(adminCard);
+
+                reportsList.appendChild(reportItem);
             });
+
+            adminCard.appendChild(adminHeader);
+            adminCard.appendChild(adminStats);
+            adminCard.appendChild(reportsList);
+
+            adminCards.appendChild(adminCard);
+        });
+    }
+
+    function copyToClipboard(text) {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+    }
+
+    /* ===================================================
+       ✅ НОВЫЙ ФУНКЦИОНАЛ: календарь → команда → ВК (B)
+       =================================================== */
+
+    // Открыть модалку
+    openDateModalBtn.addEventListener("click", () => {
+        modal.classList.add("show");
+
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        datePicker.value = `${yyyy}-${mm}-${dd}`;
+    });
+
+    // Закрыть модалку
+    function closeModalInstant() {
+        modal.classList.remove("show");
+    }
+
+    closeModalBtn.addEventListener("click", closeModalInstant);
+
+    // Подтверждение даты
+    confirmDateBtn.addEventListener("click", async () => {
+        const date = datePicker.value;
+        if (!date) {
+            showToast("Выберите дату");
+            return;
         }
 
-        // Копирование текста в буфер обмена
-        function copyToClipboard(text) {
-            const textarea = document.createElement('textarea');
-            textarea.value = text;
-            document.body.appendChild(textarea);
-            textarea.select();
-            document.execCommand('copy');
-            document.body.removeChild(textarea);
+        const command = `!uploadreports ${date}`;
+
+        // мгновенно закрываем модалку
+        closeModalInstant();
+
+        try {
+            await navigator.clipboard.writeText(command);
+            showToast("Команда скопирована. Открываю чат ВК...");
+        } catch (e) {
+            alert("Не удалось скопировать команду. Скопируй вручную: " + command);
         }
-    </script>
+
+        window.open(VK_CHAT_URL, "_blank");
+    });
+
+    // Закрытие по клику вне окна
+    modal.addEventListener("click", (e) => {
+        if (e.target === modal) closeModalInstant();
+    });
+  </script>
 </body>
 </html>
