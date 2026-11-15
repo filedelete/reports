@@ -1,1429 +1,965 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>Анализатор репортов</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Анализатор логов репортов</title>
+<style>
+:root{
+  --primary:#5794f2;
+  --secondary:#ff9830;
+  --green:#73bf69;
+  --yellow:#f2cc0c;
+  --red:#f2495c;
+  --purple:#b877d9;
+  --bg:#111217;
+  --panel:#181b1f;
+  --panel-head:#1f2329;
+  --input-bg:#111217;
+  --border:#2c3235;
+  --border-strong:#464c54;
+  --text:#ccccdc;
+  --text-strong:#f2f5f9;
+  --muted:#8e8e9f;
+  --radius:4px;
+}
+*{margin:0;padding:0;box-sizing:border-box;font-family:Inter,'Segoe UI',Roboto,Helvetica,Arial,sans-serif}
+body{background:var(--bg);color:var(--text);min-height:100vh;padding:20px;font-size:14px}
+.container{max-width:1280px;margin:0 auto}
+header{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:20px;padding:0 4px 14px;border-bottom:1px solid var(--border)}
+h1{font-size:1.35rem;font-weight:500;color:var(--text-strong);display:flex;align-items:center;gap:10px}
+h1::before{content:'';display:inline-block;width:4px;height:22px;border-radius:2px;background:linear-gradient(180deg,#ffb357,#ff7383)}
+.subtitle{color:var(--muted);font-size:.85rem}
 
-  <style>
-    /* =========================================================
-       Glassmorphism 2.0 + Cyberpunk (Tokyo Night palette)
-       Функционал НЕ трогаем: id/DOM/JS те же
-       ========================================================= */
+/* ===== Panel (общий вид блока как в Grafana) ===== */
+.upload-section,.section-box,.reports-list{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px}
 
-    :root{
-      /* Tokyo Night Core */
-      --bg-1:#070914;
-      --bg-2:#0a0f22;
-      --bg-3:#0b1430;
-      --bg-4:#0f1b3e;
+.upload-area{border:1px dashed var(--border-strong);border-radius:var(--radius);padding:34px 20px;text-align:center;transition:all .2s ease;cursor:pointer;margin-bottom:16px;background:var(--bg)}
+.upload-area:hover{border-color:var(--primary);background:rgba(87,148,242,.06)}
+.upload-area.active{border-color:var(--primary);background:rgba(87,148,242,.12)}
+.upload-icon{font-size:38px;margin-bottom:10px;opacity:.85}
+.upload-text{font-size:1rem;margin-bottom:6px;font-weight:500;color:var(--text-strong)}
+.upload-hint{color:var(--muted);font-size:.82rem}
+.file-input{display:none}
+.upload-btn{background:#3871dc;color:#fff;border:1px solid #3871dc;border-radius:var(--radius);padding:8px 18px;font-size:.85rem;font-weight:500;cursor:pointer;transition:all .15s ease}
+.upload-btn:hover{background:#4a82ee;border-color:#4a82ee}
+#clearBtn{background:transparent!important;border:1px solid var(--border-strong)!important;color:var(--text)}
+#clearBtn:hover{background:rgba(204,204,220,.08)!important}
 
-      --neon-cyan:#09d6ff;
-      --neon-violet:#4c2eff;
-      --neon-magenta:#c66bff;
-      --neon-blue:#2aa7ff;
+.filters{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:16px}
+.filter-group{flex:1;min-width:190px}
+.filter-label{display:block;margin-bottom:6px;font-weight:500;color:var(--muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.04em}
+.filter-select,.filter-input{width:100%;padding:8px 10px;border-radius:var(--radius);border:1px solid var(--border-strong);background:var(--input-bg);font-size:.88rem;color:var(--text);transition:border-color .15s,box-shadow .15s;color-scheme:dark}
+.filter-select:focus,.filter-input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 2px rgba(87,148,242,.3)}
+.filter-input::placeholder{color:#5c6370}
 
-      /* Glass */
-      --glass: rgba(255,255,255,0.06);
-      --glass-strong: rgba(255,255,255,0.10);
-      --glass-ultra: rgba(255,255,255,0.14);
-      --glass-border: rgba(255,255,255,0.16);
-      --glass-border-strong: rgba(255,255,255,0.22);
+.results-section{display:none}
 
-      /* Text */
-      --text:#e9eefb;
-      --muted:#aab6d6;
-      --muted-2:#7f8db3;
+/* ===== Stat panels ===== */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
+.stat-card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;text-align:left;position:relative;overflow:hidden}
+.stat-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--primary)}
+.stat-card:nth-child(2)::before{background:var(--green)}
+.stat-card:nth-child(3)::before{background:var(--yellow)}
+.stat-card:nth-child(4)::before{background:var(--red)}
+.stat-card:nth-child(5)::before{background:var(--purple)}
+.stat-card:nth-child(6)::before{background:var(--secondary)}
+.stat-label{color:var(--muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.04em;order:-1}
+.stat-card{display:flex;flex-direction:column;gap:6px}
+.stat-value{font-size:2rem;font-weight:500;color:var(--text-strong);line-height:1.1;font-variant-numeric:tabular-nums}
+.stat-card:nth-child(1) .stat-value{color:var(--primary)}
+.stat-card:nth-child(2) .stat-value{color:var(--green)}
+.stat-card:nth-child(3) .stat-value{color:var(--yellow)}
+.stat-card:nth-child(4) .stat-value{color:var(--red)}
+.stat-card:nth-child(5) .stat-value{color:var(--purple)}
+.stat-card:nth-child(6) .stat-value{color:var(--secondary)}
 
-      /* Status */
-      --success:#23d18b;
-      --warning:#ffb454;
-      --danger:#ff6b6b;
+.section-title{font-size:.95rem;font-weight:500;color:var(--text-strong);display:flex;align-items:center;gap:8px;margin:-16px -16px 16px;padding:10px 16px;background:var(--panel-head);border-bottom:1px solid var(--border);border-radius:var(--radius) var(--radius) 0 0}
 
-      /* Radius */
-      --radius-xl:20px;
-      --radius-lg:16px;
-      --radius-md:12px;
+.admin-cards,.tag-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+.admin-card,.tag-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;transition:all .15s ease;cursor:pointer}
+.admin-card:hover,.tag-card:hover{border-color:var(--border-strong);background:#14161b}
+.admin-card.active,.tag-card.active{border-color:var(--primary);background:rgba(87,148,242,.1);box-shadow:inset 3px 0 0 var(--primary)}
+.admin-name,.tag-name{font-weight:500;font-size:.92rem;margin-bottom:6px;color:var(--text-strong);word-break:break-word}
+.admin-count,.tag-count{font-size:1.4rem;font-weight:500;color:var(--green);font-variant-numeric:tabular-nums}
+.admin-sub,.tag-sub{color:var(--muted);font-size:.75rem;margin-top:2px}
 
-      /* Shadows / blur */
-      --shadow-soft: 0 10px 35px rgba(0,0,0,0.5);
-      --shadow-card: 0 8px 24px rgba(0,0,0,0.38);
-      --shadow-neon: 0 0 22px rgba(9,214,255,0.25), 0 0 44px rgba(76,46,255,0.22);
-      --blur: 16px;
+/* ===== Chart ===== */
+.chart-controls{display:inline-flex;gap:0;margin-bottom:14px;flex-wrap:wrap;border:1px solid var(--border-strong);border-radius:var(--radius);overflow:hidden}
+.chart-btn{padding:6px 14px;border:none;border-right:1px solid var(--border-strong);background:var(--panel);cursor:pointer;font-size:.82rem;font-weight:500;transition:all .15s;color:var(--muted)}
+.chart-btn:last-child{border-right:none}
+.chart-btn:hover{color:var(--text-strong);background:var(--panel-head)}
+.chart-btn.active{background:#3871dc;color:#fff}
+.chart-wrap{position:relative;width:100%;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:12px;overflow:hidden}
+#mainChart{width:100%;height:auto;display:block;min-height:280px;overflow:hidden}
+.chart-tooltip{display:none;position:absolute;background:#0b0c0f;border:1px solid var(--border-strong);color:var(--text-strong);padding:8px 12px;border-radius:var(--radius);font-size:.8rem;pointer-events:none;white-space:pre-line;z-index:10;line-height:1.5;box-shadow:0 6px 20px rgba(0,0,0,.6);transform:translate(-50%,-120%)}
+.chart-legend{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-top:12px}
+.chart-legend-item{display:flex;align-items:center;gap:6px;font-size:.8rem;color:var(--text)}
+.chart-legend-dot{width:10px;height:10px;border-radius:2px}
+.chart-bar{transition:opacity .15s, filter .15s;transform-origin:center bottom}
+.chart-bar:hover{filter:brightness(1.25)}
+.chart-summary{margin-top:12px;text-align:center;color:var(--muted);font-size:.82rem}
+.chart-summary b{color:var(--primary);font-weight:500}
 
-      /* Motion */
-      --ease-out:cubic-bezier(.16,.84,.44,1);
-      --ease-in:cubic-bezier(.7,.02,.84,.2);
-    }
+/* ===== Reports ===== */
+.report-item{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;transition:border-color .15s ease;border-left:3px solid var(--border-strong)}
+.report-item:hover{border-color:var(--border-strong)}
+.report-item.type-answer{border-left-color:var(--green)}
+.report-item.type-sent{border-left-color:var(--yellow)}
+.report-item.type-refused{border-left-color:var(--red)}
+.report-item.type-pm{border-left-color:var(--purple)}
 
-    *{ box-sizing:border-box; margin:0; padding:0; }
-    body{
-      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      line-height:1.55;
-      color:var(--text);
-      min-height:100vh;
-      overflow-x:hidden;
+.report-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;gap:10px;flex-wrap:wrap}
+.report-time{color:var(--muted);font-size:.78rem;font-variant-numeric:tabular-nums;font-family:'JetBrains Mono',Consolas,monospace}
+.report-badges{display:flex;gap:6px;flex-wrap:wrap}
+.report-admin{background:rgba(87,148,242,.15);color:var(--primary);border:1px solid rgba(87,148,242,.35);padding:2px 9px;border-radius:var(--radius);font-size:.75rem;font-weight:500}
+.report-badge{background:rgba(204,204,220,.08);color:var(--text);border:1px solid var(--border-strong);padding:2px 9px;border-radius:var(--radius);font-size:.75rem;font-weight:500}
+.report-badge.badge-sent{background:rgba(242,204,12,.12);color:var(--yellow);border-color:rgba(242,204,12,.35)}
+.report-badge.badge-refused{background:rgba(242,73,92,.12);color:var(--red);border-color:rgba(242,73,92,.35)}
+.report-badge.badge-pm{background:rgba(184,119,217,.12);color:var(--purple);border-color:rgba(184,119,217,.35)}
 
-      /* Cyber glass night background */
-      background:
-        radial-gradient(1100px 800px at 10% -10%, rgba(76,46,255,0.35) 0%, transparent 60%),
-        radial-gradient(900px 600px at 110% 0%, rgba(9,214,255,0.30) 0%, transparent 55%),
-        radial-gradient(1200px 900px at 50% 120%, rgba(198,107,255,0.16) 0%, transparent 60%),
-        linear-gradient(180deg, var(--bg-1), var(--bg-2) 40%, var(--bg-3) 70%, var(--bg-4));
-    }
+.report-player{font-weight:500;margin-bottom:6px;color:var(--text-strong);font-size:.88rem}
+.report-question{margin-bottom:8px;line-height:1.55;word-wrap:break-word;color:var(--text)}
+.report-answer{background:rgba(87,148,242,.06);padding:10px 12px;border-radius:var(--radius);border-left:3px solid var(--primary);margin-top:8px;line-height:1.55;word-wrap:break-word}
+.report-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.report-tag{background:rgba(255,152,48,.12);color:var(--secondary);border:1px solid rgba(255,152,48,.3);padding:1px 8px;border-radius:var(--radius);font-size:.72rem;font-weight:500;cursor:pointer;transition:all .15s}
+.report-tag:hover{background:rgba(255,152,48,.25)}
 
-    /* animated “aurora” overlay */
-    body::before{
-      content:"";
-      position:fixed; inset:-20%;
-      background:
-        conic-gradient(from 0deg,
-          rgba(9,214,255,0.10),
-          rgba(76,46,255,0.12),
-          rgba(198,107,255,0.10),
-          rgba(42,167,255,0.10),
-          rgba(9,214,255,0.10));
-      filter: blur(70px) saturate(140%);
-      animation: auroraSpin 18s linear infinite;
-      z-index:-2;
-      opacity:.9;
-      transform: translateZ(0);
-    }
-    @keyframes auroraSpin{
-      to{ transform: rotate(360deg); }
-    }
+.empty-state{text-align:center;padding:44px 20px;color:var(--muted)}
+.empty-icon{font-size:48px;margin-bottom:12px;opacity:.5}
 
-    /* subtle scanlines */
-    body::after{
-      content:"";
-      position:fixed; inset:0;
-      background:
-        repeating-linear-gradient(
-          to bottom,
-          rgba(255,255,255,0.02),
-          rgba(255,255,255,0.02) 1px,
-          transparent 1px,
-          transparent 3px
-        );
-      mix-blend-mode: soft-light;
-      pointer-events:none;
-      z-index:-1;
-      opacity:.25;
-    }
-
-    .container{
-      max-width:1200px;
-      margin:0 auto;
-      padding:18px;
-    }
-
-    header{
-      position: sticky;
-      top:0;
-      z-index:10;
-      padding:14px 0;
-      margin-bottom:18px;
-      background:
-        linear-gradient(90deg, rgba(7,9,20,0.9), rgba(10,15,34,0.82));
-      border-bottom:1px solid var(--glass-border);
-      backdrop-filter: blur(var(--blur));
-    }
-    header h1{
-      text-align:center;
-      font-weight:900;
-      font-size: clamp(1.3rem, 2.6vw, 2.15rem);
-      letter-spacing:0.6px;
-      text-shadow:
-        0 2px 12px rgba(0,0,0,.55),
-        0 0 18px rgba(76,46,255,0.35);
-      background: linear-gradient(90deg, #fff, #cfe3ff 35%, #e8d4ff 70%, #fff);
-      -webkit-background-clip:text;
-      background-clip:text;
-      color:transparent;
-    }
-
-    /* Sections */
-    .upload-section,
-    .summary-section{
-      background: var(--glass);
-      border:1px solid var(--glass-border);
-      border-radius: var(--radius-xl);
-      padding:16px;
-      box-shadow: var(--shadow-soft);
-      backdrop-filter: blur(var(--blur));
-      position:relative;
-      overflow:hidden;
-      isolation:isolate;
-    }
-    /* neon rim */
-    .upload-section::before,
-    .summary-section::before{
-      content:"";
-      position:absolute; inset:-1px;
-      background:
-        linear-gradient(135deg,
-          rgba(9,214,255,0.55),
-          rgba(76,46,255,0.55),
-          rgba(198,107,255,0.45));
-      opacity:.13;
-      z-index:-1;
-      filter: blur(18px);
-    }
-
-    .upload-section{ margin-bottom:14px; }
-
-    .upload-section h2,
-    .summary-section h2{
-      font-size:1.12rem;
-      font-weight:800;
-      margin-bottom:10px;
-      color:#f3f6ff;
-      letter-spacing:.3px;
-      text-shadow: 0 0 10px rgba(9,214,255,0.18);
-    }
-
-    /* Upload area */
-    .upload-area{
-      border:1.8px dashed rgba(255,255,255,0.30);
-      border-radius: var(--radius-lg);
-      padding:28px 16px;
-      text-align:center;
-      margin-bottom:12px;
-      cursor:pointer;
-      transition:0.28s var(--ease-out);
-      background:
-        linear-gradient(180deg, rgba(255,255,255,0.03), rgba(0,0,0,0.25)),
-        radial-gradient(400px 120px at 50% -10%, rgba(9,214,255,0.16), transparent 60%);
-      position:relative;
-      overflow:hidden;
-    }
-    .upload-area p{
-      color:var(--muted);
-      font-size:1rem;
-      font-weight:600;
-    }
-    .upload-area::after{
-      content:"";
-      position:absolute; inset:0;
-      background:
-        linear-gradient(120deg, transparent 0%, rgba(255,255,255,0.12) 45%, transparent 65%);
-      transform: translateX(-120%);
-      transition:0.6s var(--ease-out);
-      opacity:.35;
-      pointer-events:none;
-    }
-    .upload-area:hover{
-      border-color: rgba(9,214,255,0.9);
-      background:
-        linear-gradient(180deg, rgba(9,214,255,0.08), rgba(0,0,0,0.28)),
-        radial-gradient(600px 220px at 50% -20%, rgba(76,46,255,0.24), transparent 60%);
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-neon);
-    }
-    .upload-area:hover::after{
-      transform: translateX(120%);
-    }
-    .upload-area.dragover{
-      border-color: rgba(76,46,255,0.95);
-      background: rgba(76,46,255,0.12);
-      box-shadow: 0 0 0 3px rgba(76,46,255,0.18), var(--shadow-neon);
-    }
-
-    /* Buttons */
-    .upload-btn,
-    .filter-btn,
-    .glass-btn{
-      border:none;
-      cursor:pointer;
-      font-weight:800;
-      letter-spacing:.25px;
-      transition:0.22s var(--ease-out);
-      position:relative;
-      overflow:hidden;
-    }
-
-    .upload-btn{
-      width:100%;
-      padding:12px 14px;
-      border-radius: 14px;
-      color:white;
-      background:
-        linear-gradient(135deg, rgba(9,214,255,0.95), rgba(76,46,255,0.95));
-      box-shadow:
-        0 10px 26px rgba(9,214,255,0.30),
-        0 8px 22px rgba(76,46,255,0.28);
-      text-shadow:0 1px 8px rgba(0,0,0,0.45);
-    }
-    .upload-btn::after{
-      content:"";
-      position:absolute; inset:0;
-      background: linear-gradient(120deg, transparent, rgba(255,255,255,0.25), transparent);
-      transform: translateX(-120%);
-      transition:0.7s var(--ease-out);
-      opacity:.8;
-    }
-    .upload-btn:hover{
-      transform: translateY(-2px);
-      filter:brightness(1.06) saturate(115%);
-      box-shadow:
-        0 0 20px rgba(9,214,255,0.4),
-        0 0 34px rgba(76,46,255,0.35),
-        0 12px 30px rgba(0,0,0,0.45);
-    }
-    .upload-btn:hover::after{ transform: translateX(120%); }
-
-    /* Glass buttons */
-    .glass-btn{
-      background:
-        linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.04));
-      color:#f8fbff;
-      border:1px solid var(--glass-border);
-      padding:10px 14px;
-      border-radius: 14px;
-      backdrop-filter: blur(12px);
-      box-shadow: var(--shadow-card);
-      font-size:0.96rem;
-    }
-    .glass-btn:hover{
-      transform: translateY(-2px);
-      border-color: rgba(9,214,255,0.8);
-      box-shadow: var(--shadow-neon);
-    }
-    .glass-btn.cancel{
-      background: linear-gradient(180deg, rgba(255,107,107,0.18), rgba(255,107,107,0.06));
-      border-color: rgba(255,107,107,0.45);
-    }
-    .glass-btn.cancel:hover{
-      border-color: rgba(255,107,107,0.9);
-      box-shadow: 0 0 18px rgba(255,107,107,0.35);
-    }
-
-    /* Filters */
-    .filters{
-      margin-top:12px;
-      padding:12px;
-      border-radius: var(--radius-xl);
-      background: var(--glass);
-      border:1px solid var(--glass-border);
-      box-shadow: var(--shadow-card);
-      backdrop-filter: blur(var(--blur));
-      display:flex;
-      flex-wrap:wrap;
-      gap:10px;
-      margin-bottom:14px;
-
-      animation: fadeUp .45s var(--ease-out) both;
-    }
-
-    .filter-group{
-      flex:1;
-      min-width: 220px;
-    }
-    .filter-group label{
-      display:block;
-      margin-bottom:6px;
-      font-weight:800;
-      font-size:0.92rem;
-      color:#e6edff;
-      letter-spacing:.2px;
-      text-shadow:0 0 8px rgba(76,46,255,0.22);
-    }
-    .filter-group select,
-    .filter-group input{
-      width:100%;
-      padding:9px 10px;
-      border-radius:12px;
-      border:1px solid rgba(255,255,255,0.18);
-      background:
-        linear-gradient(180deg, rgba(0,0,0,0.35), rgba(0,0,0,0.2));
-      color:var(--text);
-      outline:none;
-      transition:0.2s var(--ease-out);
-      box-shadow: inset 0 0 0 1px rgba(9,214,255,0.04);
-    }
-    .filter-group select:focus,
-    .filter-group input:focus{
-      border-color: rgba(76,46,255,0.9);
-      box-shadow:
-        0 0 0 3px rgba(76,46,255,0.18),
-        0 0 16px rgba(9,214,255,0.18);
-    }
-    .filter-group .multiselect{
-      height:120px;
-      overflow:auto;
-      scrollbar-width: thin;
-      scrollbar-color: rgba(9,214,255,0.6) transparent;
-    }
-    .filter-group .multiselect::-webkit-scrollbar{
-      width:8px;
-    }
-    .filter-group .multiselect::-webkit-scrollbar-thumb{
-      background: linear-gradient(180deg, rgba(9,214,255,0.8), rgba(76,46,255,0.8));
-      border-radius:999px;
-    }
-    .filter-actions{
-      display:flex;
-      gap:6px;
-      margin-top:8px;
-    }
-
-    .filter-btn{
-      flex:1;
-      padding:7px 8px;
-      border-radius:10px;
-      font-size:0.82rem;
-      color:#e9eefb;
-      background:
-        linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
-      border:1px solid rgba(255,255,255,0.16);
-      text-shadow:0 1px 6px rgba(0,0,0,0.45);
-    }
-    .filter-btn:hover{
-      background:
-        linear-gradient(180deg, rgba(9,214,255,0.12), rgba(76,46,255,0.10));
-      border-color: rgba(9,214,255,0.7);
-      transform: translateY(-1px);
-      box-shadow: var(--shadow-neon);
-    }
-
-    /* Summary */
-    .summary-section{
-      margin-top:0;
-      margin-bottom:14px;
-      animation: fadeUp .45s var(--ease-out) both;
-    }
-    .summary-grid{
-      display:grid;
-      grid-template-columns: repeat(auto-fit, minmax(170px,1fr));
-      gap:10px;
-      margin-top:10px;
-    }
-    .summary-card{
-      background:
-        linear-gradient(180deg, rgba(255,255,255,0.08), rgba(0,0,0,0.25));
-      border:1px solid rgba(255,255,255,0.14);
-      border-radius:16px;
-      padding:12px;
-      text-align:center;
-      backdrop-filter: blur(10px);
-      position:relative;
-      overflow:hidden;
-      transition:.25s var(--ease-out);
-    }
-    .summary-card::before{
-      content:"";
-      position:absolute; inset:-40% -20% auto -20%;
-      height:120%;
-      background: radial-gradient(320px 140px at 50% 0%, rgba(9,214,255,0.22), transparent 60%);
-      opacity:.9;
-      z-index:0;
-    }
-    .summary-card:hover{
-      transform: translateY(-2px);
-      border-color: rgba(9,214,255,0.75);
-      box-shadow: var(--shadow-neon);
-    }
-    .summary-value{
-      position:relative; z-index:1;
-      font-size:1.7rem;
-      font-weight:900;
-      margin-bottom:2px;
-      background: linear-gradient(90deg, #fff, #cfe3ff 45%, #e8d4ff);
-      -webkit-background-clip:text;
-      background-clip:text;
-      color:transparent;
-      text-shadow: 0 0 18px rgba(9,214,255,0.25);
-    }
-    .summary-label{
-      position:relative; z-index:1;
-      color:var(--muted);
-      font-size:0.9rem;
-      font-weight:700;
-      letter-spacing:.2px;
-    }
-
-    /* Admin cards */
-    .admin-cards{
-      display:grid;
-      grid-template-columns: repeat(auto-fill, minmax(320px,1fr));
-      gap:12px;
-    }
-    .admin-card{
-      background: var(--glass);
-      border:1px solid var(--glass-border);
-      border-radius: var(--radius-xl);
-      box-shadow: var(--shadow-card);
-      backdrop-filter: blur(var(--blur));
-      overflow:hidden;
-      transition:0.25s var(--ease-out);
-      position:relative;
-      animation: cardIn .45s var(--ease-out) both;
-    }
-    @keyframes cardIn{
-      from{ opacity:0; transform: translateY(8px) scale(.985); }
-      to{ opacity:1; transform: translateY(0) scale(1); }
-    }
-    .admin-card::after{
-      content:"";
-      position:absolute; inset:0;
-      background:
-        linear-gradient(140deg, rgba(9,214,255,0.10), transparent 40%),
-        linear-gradient(320deg, rgba(76,46,255,0.12), transparent 55%);
-      pointer-events:none;
-    }
-    .admin-card:hover{
-      transform: translateY(-3px);
-      border-color: var(--glass-border-strong);
-      box-shadow:
-        0 0 26px rgba(9,214,255,0.25),
-        0 0 52px rgba(76,46,255,0.22),
-        var(--shadow-card);
-    }
-
-    .admin-header{
-      background:
-        linear-gradient(135deg,
-          rgba(9,214,255,0.26),
-          rgba(76,46,255,0.26),
-          rgba(198,107,255,0.22)),
-        rgba(0,0,0,0.45);
-      color:white;
-      padding:12px 14px;
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      border-bottom:1px solid rgba(255,255,255,0.12);
-      position:relative;
-    }
-    .admin-header::before{
-      content:"";
-      position:absolute; left:0; top:0; right:0; height:2px;
-      background: linear-gradient(90deg, var(--neon-cyan), var(--neon-violet), var(--neon-magenta));
-      opacity:.9;
-      box-shadow: var(--shadow-neon);
-    }
-    .admin-name{
-      font-size:1.08rem;
-      font-weight:900;
-      letter-spacing:0.4px;
-      text-shadow:
-        0 0 10px rgba(9,214,255,0.25),
-        0 0 12px rgba(76,46,255,0.25);
-    }
-    .report-count{
-      background:
-        radial-gradient(100% 100% at 30% 10%, rgba(255,255,255,0.9), transparent 60%),
-        linear-gradient(135deg, var(--neon-cyan), var(--neon-violet));
-      color:#07101f;
-      border-radius:999px;
-      min-width:34px;
-      height:34px;
-      padding:0 10px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-size:0.95rem;
-      font-weight:900;
-      box-shadow:
-        0 0 18px rgba(9,214,255,0.55),
-        0 0 18px rgba(76,46,255,0.45);
-    }
-
-    .admin-stats{
-      display:flex;
-      justify-content:space-around;
-      padding:9px 8px;
-      background: rgba(0,0,0,0.32);
-      border-bottom:1px solid rgba(255,255,255,0.08);
-    }
-    .stat-item{text-align:center;}
-    .stat-value{
-      font-weight:900;
-      font-size:1.08rem;
-      color:#f2f6ff;
-      text-shadow:0 0 12px rgba(9,214,255,0.18);
-    }
-    .stat-label{
-      font-size:0.76rem;
-      color:var(--muted);
-      font-weight:700;
-      letter-spacing:.2px;
-    }
-
-    .reports-list{
-      max-height:420px;
-      overflow:auto;
-      padding:6px;
-      scrollbar-width: thin;
-      scrollbar-color: rgba(76,46,255,0.7) transparent;
-    }
-    .reports-list::-webkit-scrollbar{ width:8px; }
-    .reports-list::-webkit-scrollbar-thumb{
-      background: linear-gradient(180deg, rgba(76,46,255,0.9), rgba(9,214,255,0.9));
-      border-radius:999px;
-    }
-
-    .report-item{
-      padding:10px 10px;
-      margin:6px;
-      border-radius:14px;
-      background:
-        linear-gradient(180deg, rgba(255,255,255,0.06), rgba(0,0,0,0.32));
-      border:1px solid rgba(255,255,255,0.10);
-      transition:0.22s var(--ease-out);
-      cursor:pointer;
-      position:relative;
-      overflow:hidden;
-    }
-    .report-item::after{
-      content:"";
-      position:absolute; left:-60%; top:-80%;
-      width:140%; height:180%;
-      background: radial-gradient(220px 120px at 50% 50%, rgba(9,214,255,0.12), transparent 60%);
-      transform: rotate(12deg);
-      opacity:.8;
-      pointer-events:none;
-    }
-    .report-item:hover{
-      background:
-        linear-gradient(180deg, rgba(9,214,255,0.08), rgba(0,0,0,0.34));
-      border-color: rgba(9,214,255,0.5);
-      transform: translateY(-1px);
-      box-shadow: 0 0 14px rgba(9,214,255,0.22);
-    }
-    .report-item.copied{
-      background: rgba(35,209,139,0.16);
-      border-color: rgba(35,209,139,0.55);
-      box-shadow: 0 0 18px rgba(35,209,139,0.25);
-    }
-
-    .report-time{
-      font-size:0.76rem;
-      color:var(--muted-2);
-      margin-bottom:4px;
-      font-weight:700;
-      letter-spacing:.2px;
-    }
-    .report-player{
-      font-weight:900;
-      margin-bottom:4px;
-      color:#f6f8ff;
-      text-shadow:0 0 10px rgba(76,46,255,0.18);
-    }
-    .report-question{
-      margin-bottom:4px;
-      font-style:italic;
-      color:#d7ddf3;
-      font-size:0.96rem;
-    }
-    .report-answer{
-      margin-bottom:7px;
-      font-size:1rem;
-      color:#f0f3ff;
-      white-space:pre-wrap;
-      word-break:break-word;
-    }
-
-    .report-tags{
-      display:flex;
-      flex-wrap:wrap;
-      gap:6px;
-      margin-top:4px;
-    }
-    .tag{
-      padding:4px 9px;
-      border-radius:999px;
-      font-size:0.72rem;
-      font-weight:900;
-      letter-spacing:.3px;
-      border:1px solid rgba(255,255,255,0.14);
-      background: rgba(255,255,255,0.04);
-      text-shadow: 0 1px 6px rgba(0,0,0,0.35);
-    }
-    .tag-observation{ background: rgba(255,180,84,0.18); color:#ffd9a3; border-color: rgba(255,180,84,0.55);}
-    .tag-solving{ background: rgba(35,209,139,0.18); color:#b8f7dd; border-color: rgba(35,209,139,0.55);}
-    .tag-chat{ background: rgba(57,208,255,0.18); color:#bfefff; border-color: rgba(57,208,255,0.65);}
-    .tag-transfer{ background: rgba(155,89,182,0.20); color:#e9c8ff; border-color: rgba(155,89,182,0.6);}
-    .tag-punishment{ background: rgba(255,107,107,0.18); color:#ffc4c4; border-color: rgba(255,107,107,0.6);}
-    .tag-instruction{ background: rgba(26,188,156,0.18); color:#bff6ea; border-color: rgba(26,188,156,0.6);}
-
-    /* Toast */
-    .toast{
-      position:fixed;
-      bottom:18px;
-      right:18px;
-      background:
-        linear-gradient(180deg, rgba(10,12,18,0.95), rgba(10,12,18,0.8));
-      color:white;
-      padding:10px 14px;
-      border-radius:14px;
-      border:1px solid rgba(255,255,255,0.16);
-      box-shadow:
-        var(--shadow-soft),
-        0 0 18px rgba(9,214,255,0.22);
-      opacity:0;
-      transform: translateY(8px) scale(.98);
-      transition:0.28s var(--ease-out);
-      z-index:1000;
-      backdrop-filter: blur(10px);
-      font-weight:800;
-      font-size:0.96rem;
-    }
-    .toast.show{
-      opacity:1;
-      transform: translateY(0) scale(1);
-    }
-
-    .hidden{ display:none; }
-
-    /* Calendar modal */
-    .glass-modal{
-      position:fixed;
-      inset:0;
-      background:
-        radial-gradient(900px 600px at 50% -10%, rgba(9,214,255,0.16), transparent 60%),
-        rgba(0,0,0,0.6);
-      backdrop-filter: blur(8px);
-      display:none;
-      align-items:center;
-      justify-content:center;
-      z-index:9999;
-      padding:12px;
-      animation: fadeIn .25s var(--ease-out);
-    }
-    .glass-modal.show{ display:flex; }
-
-    .glass-modal-content{
-      width:min(380px, 100%);
-      background:
-        linear-gradient(180deg, rgba(15,20,40,0.95), rgba(8,10,18,0.92));
-      border:1px solid var(--glass-border);
-      border-radius:18px;
-      padding:16px;
-      color:white;
-      box-shadow:
-        var(--shadow-soft),
-        0 0 26px rgba(76,46,255,0.28);
-      backdrop-filter: blur(12px);
-      position:relative;
-      overflow:hidden;
-      animation: popIn .28s var(--ease-out);
-    }
-    .glass-modal-content::before{
-      content:"";
-      position:absolute; inset:-1px;
-      background: linear-gradient(135deg, rgba(9,214,255,0.6), rgba(76,46,255,0.6), rgba(198,107,255,0.55));
-      opacity:.10;
-      filter: blur(16px);
-      z-index:-1;
-    }
-    .glass-modal-content h3{
-      margin-bottom:10px;
-      font-size:1.18rem;
-      text-align:center;
-      font-weight:900;
-      letter-spacing:.3px;
-      text-shadow:0 0 12px rgba(9,214,255,0.25);
-    }
-    #datePicker{
-      width:100%;
-      padding:10px 12px;
-      border-radius:12px;
-      border:1px solid rgba(255,255,255,0.20);
-      background:
-        linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.04));
-      color:#fff;
-      outline:none;
-      margin-bottom:12px;
-      font-weight:800;
-      letter-spacing:.2px;
-    }
-    .glass-modal-actions{
-      display:flex;
-      gap:8px;
-      justify-content:center;
-    }
-
-    /* Animations */
-    @keyframes fadeUp{
-      from{ opacity:0; transform: translateY(6px); }
-      to{ opacity:1; transform: translateY(0); }
-    }
-    @keyframes fadeIn{
-      from{ opacity:0; }
-      to{ opacity:1; }
-    }
-    @keyframes popIn{
-      from{ opacity:0; transform: translateY(8px) scale(.98); }
-      to{ opacity:1; transform: translateY(0) scale(1); }
-    }
-
-    /* Responsive */
-    @media (max-width:768px){
-      .admin-cards{ grid-template-columns:1fr; }
-      .filters{ flex-direction:column; }
-      .container{ padding:12px; }
-    }
-  </style>
+@media(max-width:768px){
+  body{padding:12px}
+  .admin-cards,.tag-cards{grid-template-columns:1fr}
+  .filters{flex-direction:column}
+  h1{font-size:1.15rem}
+  .chart-btn{padding:6px 10px;font-size:.75rem}
+}
+</style>
 </head>
-
 <body>
+<div class="container">
   <header>
-    <div class="container">
-      <h1>Анализатор репортов администраторов</h1>
-    </div>
+    <h1>Анализатор логов репортов</h1>
+    <p class="subtitle">Загрузите файл с логами (формат Arizona RP helper dump)</p>
   </header>
 
-  <div class="container">
-    <section class="upload-section">
-      <h2>Загрузка файла с логами</h2>
+  <section class="upload-section">
+    <div class="upload-area" id="uploadArea">
+      <div class="upload-icon">📁</div>
+      <p class="upload-text">Перетащите файл сюда или нажмите для выбора</p>
+      <p class="upload-hint">Поддерживаются файлы .txt</p>
+    </div>
+    <input type="file" id="fileInput" class="file-input" accept=".txt">
+    <div style="text-align:center;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+      <button class="upload-btn" id="uploadBtn" type="button">Загрузить файл</button>
+      <button class="upload-btn" id="clearBtn" type="button" >Очистить</button>
+    </div>
+  </section>
 
-      <!-- ✅ ДОБАВЛЕННАЯ КНОПКА (ID тот же) -->
-      <div style="margin: 8px 0 14px 0;">
-        <button id="openDateModal" class="glass-btn">Выбрать дату и открыть ВК</button>
-      </div>
-
-      <div class="upload-area" id="uploadArea">
-        <p>Перетащите файл сюда или нажмите для выбора</p>
-        <input type="file" id="fileInput" accept=".txt" class="hidden">
-      </div>
-      <button class="upload-btn" id="uploadBtn">Загрузить файл</button>
-    </section>
-
-    <section class="filters hidden" id="filtersSection">
-      <div class="filter-group">
-        <label for="adminFilter">Фильтр по администратору</label>
-        <select id="adminFilter" class="multiselect" multiple>
-          <option value="all">Все администраторы</option>
-        </select>
-        <div class="filter-actions">
-          <button class="filter-btn" id="selectAllAdmins">Выбрать всех</button>
-          <button class="filter-btn" id="deselectAllAdmins">Сбросить</button>
-        </div>
-      </div>
-
-      <div class="filter-group">
-        <label for="tagFilter">Фильтр по тегу</label>
-        <select id="tagFilter" class="multiselect" multiple>
-          <option value="all">Все теги</option>
-          <option value="observation">Наблюдение</option>
-          <option value="solving">Решение жалобы</option>
-          <option value="chat">Ответ в чат</option>
-          <option value="transfer">Передача репорта</option>
-          <option value="punishment">Наказание</option>
-          <option value="instruction">Инструкция</option>
-        </select>
-        <div class="filter-actions">
-          <button class="filter-btn" id="selectAllTags">Выбрать все</button>
-          <button class="filter-btn" id="deselectAllTags">Сбросить</button>
-        </div>
-      </div>
-
-      <div class="filter-group">
-        <label for="searchFilter">Поиск по тексту</label>
-        <input type="text" id="searchFilter" placeholder="Введите текст для поиска...">
-      </div>
-    </section>
-
-    <section class="summary-section hidden" id="summarySection">
-      <h2>Сводная статистика</h2>
-      <div class="summary-grid" id="summaryGrid"></div>
-    </section>
-
-    <section class="admin-cards" id="adminCards"></section>
-  </div>
-
-  <!-- ✅ МОДАЛКА С КАЛЕНДАРЁМ -->
-  <div id="dateModal" class="glass-modal">
-    <div class="glass-modal-content">
-      <h3>Выберите дату</h3>
-      <input type="date" id="datePicker">
-      <div class="glass-modal-actions">
-        <button id="confirmDate" class="glass-btn">Продолжить</button>
-        <button id="closeModal" class="glass-btn cancel">Отмена</button>
-      </div>
+  <div class="filters">
+    <div class="filter-group">
+      <label class="filter-label" for="typeFilter">Тип записи</label>
+      <select id="typeFilter" class="filter-select">
+        <option value="">Все типы</option>
+        <option value="answer">Ответы на репорты</option>
+        <option value="sent">Отправленные игроками</option>
+        <option value="refused">Отказы админов</option>
+        <option value="pm">Ответы в PM</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label class="filter-label" for="adminFilter">Администратор</label>
+      <select id="adminFilter" class="filter-select">
+        <option value="">Все администраторы</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label class="filter-label" for="tagFilter">Тег</label>
+      <select id="tagFilter" class="filter-select">
+        <option value="">Все теги</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label class="filter-label" for="searchFilter">Поиск</label>
+      <input type="text" id="searchFilter" class="filter-input" placeholder="Текст в вопросе/ответе...">
     </div>
   </div>
 
-  <div class="toast" id="toast">Текст скопирован в буфер обмена</div>
+  <section class="results-section" id="resultsSection">
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-value" id="totalReports">0</div>
+        <div class="stat-label">Всего записей</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="totalAnswers">0</div>
+        <div class="stat-label">Ответов админов</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="totalSent">0</div>
+        <div class="stat-label">Отправлено игроками</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="totalAdmins">0</div>
+        <div class="stat-label">Администраторов</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="uniqueTags">0</div>
+        <div class="stat-label">Уникальных тегов</div>
+      </div>
+    </div>
 
-  <script>
-    // Основные переменные
-    let reportsData = [];
-    let adminsData = {};
-    let currentFilter = {
-        admins: ['all'],
-        tags: ['all'],
-        search: ''
+    <div class="section-box">
+      <h2 class="section-title">📈 Статистика активности</h2>
+      <div class="chart-controls">
+        <button class="chart-btn active" type="button" data-mode="time">По времени</button>
+        <button class="chart-btn" type="button" data-mode="type">По типам записей</button>
+        <button class="chart-btn" type="button" data-mode="admins">Топ админов</button>
+      </div>
+      <div class="chart-wrap">
+        <svg id="mainChart" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 320" preserveAspectRatio="xMidYMid meet"></svg>
+        <div id="chartTooltip" class="chart-tooltip"></div>
+      </div>
+      <div class="chart-legend" id="chartLegend"></div>
+      <div class="chart-summary" id="chartSummary"></div>
+    </div>
+
+    <div class="section-box">
+      <h2 class="section-title">📊 Активность администраторов</h2>
+      <div class="admin-cards" id="adminCards"></div>
+    </div>
+
+    <div class="section-box">
+      <h2 class="section-title">🏷️ Популярные теги</h2>
+      <div class="tag-cards" id="tagCards"></div>
+    </div>
+
+    <div class="reports-list">
+      <h2 class="section-title">📋 Записи <span id="shownCount" style="font-size:1rem;color:#8e8e9f;font-weight:400"></span></h2>
+      <div id="reportsContainer"></div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function(){
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+  const $ = id => document.getElementById(id);
+  const uploadArea = $('uploadArea');
+  const fileInput  = $('fileInput');
+  const uploadBtn  = $('uploadBtn');
+  const clearBtn   = $('clearBtn');
+  const resultsSection = $('resultsSection');
+  const typeFilter  = $('typeFilter');
+  const adminFilter = $('adminFilter');
+  const tagFilter   = $('tagFilter');
+  const searchFilter = $('searchFilter');
+  const chartSvg    = $('mainChart');
+  const chartTip    = $('chartTooltip');
+  const chartLegend = $('chartLegend');
+  const chartSummary = $('chartSummary');
+
+  let reportsData = [];
+  let adminsData  = [];
+  let tagsData    = [];
+  let currentAdmin = null;
+  let currentTag   = null;
+  let chartMode    = 'time';
+
+  // ===== Upload =====
+  uploadArea.addEventListener('click', () => fileInput.click());
+  uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.classList.add('active'); });
+  uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('active'));
+  uploadArea.addEventListener('drop', e => {
+    e.preventDefault();
+    uploadArea.classList.remove('active');
+    if (e.dataTransfer.files.length) processFile(e.dataTransfer.files[0]);
+  });
+  uploadBtn.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', e => {
+    if (e.target.files.length) processFile(e.target.files[0]);
+    fileInput.value = '';
+  });
+  clearBtn.addEventListener('click', () => {
+    reportsData = []; adminsData = []; tagsData = [];
+    currentAdmin = null; currentTag = null;
+    resultsSection.style.display = 'none';
+    adminFilter.innerHTML = '<option value="">Все администраторы</option>';
+    tagFilter.innerHTML = '<option value="">Все теги</option>';
+    searchFilter.value = '';
+    typeFilter.value = '';
+  });
+
+  document.querySelectorAll('.chart-btn').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('.chart-btn').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      chartMode = b.dataset.mode;
+      renderChart();
+    });
+  });
+
+  function processFile(file){
+    const reader = new FileReader();
+    reader.onload = e => {
+      parseContent(e.target.result);
+      renderAll();
+      resultsSection.style.display = 'block';
     };
+    reader.readAsText(file, 'UTF-8');
+  }
 
-    // Элементы DOM
-    const uploadArea = document.getElementById('uploadArea');
-    const fileInput = document.getElementById('fileInput');
-    const uploadBtn = document.getElementById('uploadBtn');
-    const filtersSection = document.getElementById('filtersSection');
-    const summarySection = document.getElementById('summarySection');
-    const adminCards = document.getElementById('adminCards');
-    const adminFilter = document.getElementById('adminFilter');
-    const tagFilter = document.getElementById('tagFilter');
-    const searchFilter = document.getElementById('searchFilter');
-    const summaryGrid = document.getElementById('summaryGrid');
-    const selectAllAdmins = document.getElementById('selectAllAdmins');
-    const deselectAllAdmins = document.getElementById('deselectAllAdmins');
-    const selectAllTags = document.getElementById('selectAllTags');
-    const deselectAllTags = document.getElementById('deselectAllTags');
-    const toast = document.getElementById('toast');
+  // ===== Теги =====
+  const TAG_LIST = [
+    'бот','читер','чит','софт','оверлей','автокликер',
+    'застрял','застр','помогите','помоги','хелп','баг','лаг',
+    'ферма','дм','дб','афк','рванка','нрп','нон рп','нонрп','спам','оск','оскорб',
+    'ковш','лавка','мопед','скутер','текстура','вода','тону',
+    'поломан','почини','заправ','флип','закладки','закладка',
+    'мп','рп','завод','шахта','цр','тир','награда','квест',
+    'вип','донат','деньги','документы','розыск','угон','охранник',
+    'маска','скин','тюнинг','заточка','кейс','жалоба',
+    'мобил','телефон','пинг','краш','вылет','кик','античит'
+  ];
+  function extractTags(text){
+    if (!text) return [];
+    const lower = text.toLowerCase();
+    const found = [];
+    TAG_LIST.forEach(t => { if (lower.includes(t)) found.push(t); });
+    const filtered = found.filter((t,i) =>
+      !found.some((o,j) => j !== i && o !== t && o.includes(t))
+    );
+    return [...new Set(filtered)];
+  }
 
-    // ✅ Элементы для календаря/ВК
-    const modal = document.getElementById("dateModal");
-    const openDateModalBtn = document.getElementById("openDateModal");
-    const closeModalBtn = document.getElementById("closeModal");
-    const confirmDateBtn = document.getElementById("confirmDate");
-    const datePicker = document.getElementById("datePicker");
-    const VK_CHAT_URL = "https://vk.com/im/convo/-223392392?entrypoint=list_all";
+  // ===== Парсер =====
+  function parseContent(content){
+    reportsData = []; adminsData = []; tagsData = [];
+    const lines = content.split(/\r?\n/);
 
-    // Обработчики событий
-    uploadArea.addEventListener('click', () => fileInput.click());
-    uploadArea.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        uploadArea.classList.add('dragover');
-    });
-    uploadArea.addEventListener('dragleave', () => {
-        uploadArea.classList.remove('dragover');
-    });
-    uploadArea.addEventListener('drop', (e) => {
-        e.preventDefault();
-        uploadArea.classList.remove('dragover');
-        if (e.dataTransfer.files.length) {
-            fileInput.files = e.dataTransfer.files;
-            processFile(e.dataTransfer.files[0]);
+    for (let i=0; i<lines.length; i++){
+      const raw = lines[i].trim();
+      if (!raw || raw.startsWith('=') || raw.startsWith('Выгрузка')
+          || raw.startsWith('по типу') || raw.startsWith('значение')) continue;
+
+      const tMatch = raw.match(/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})/);
+      if (!tMatch) continue;
+      const time = tMatch[1];
+      const rest = raw.substring(time.length).trim();
+
+      // 1) Ответ на репорт
+      let m = rest.match(/^Администратор\s+(\S+)\s+ответил на репорт\s+(.+?):\s*([\s\S]*)$/);
+      if (m){
+        const admin = m[1];
+        const player = m[2].replace(/^\[\d+\]/, '').trim();
+        const body = m[3];
+        const qa = body.match(/Вопрос:\s*([\s\S]*?)\s*\|?\s*Ответ:\s*([\s\S]*)$/);
+        if (qa){
+          pushRecord({
+            time, admin, player,
+            question: qa[1].replace(/\s*\|\s*$/,'').trim(),
+            answer: qa[2].trim(),
+            type: 'answer'
+          });
+          continue;
         }
-    });
-    uploadBtn.addEventListener('click', () => fileInput.click());
-    fileInput.addEventListener('change', (e) => {
-        if (e.target.files.length) {
-            processFile(e.target.files[0]);
-        }
-    });
+      }
 
-    adminFilter.addEventListener('change', (e) => {
-        currentFilter.admins = Array.from(e.target.selectedOptions).map(option => option.value);
-        updateDisplay();
-    });
-
-    tagFilter.addEventListener('change', (e) => {
-        currentFilter.tags = Array.from(e.target.selectedOptions).map(option => option.value);
-        updateDisplay();
-    });
-
-    searchFilter.addEventListener('input', (e) => {
-        currentFilter.search = e.target.value.toLowerCase();
-        updateDisplay();
-    });
-
-    selectAllAdmins.addEventListener('click', () => {
-        const options = Array.from(adminFilter.options);
-        options.forEach(option => option.selected = true);
-        currentFilter.admins = options.map(option => option.value);
-        updateDisplay();
-    });
-
-    deselectAllAdmins.addEventListener('click', () => {
-        adminFilter.value = '';
-        currentFilter.admins = ['all'];
-        updateDisplay();
-    });
-
-    selectAllTags.addEventListener('click', () => {
-        const options = Array.from(tagFilter.options);
-        options.forEach(option => option.selected = true);
-        currentFilter.tags = options.map(option => option.value);
-        updateDisplay();
-    });
-
-    deselectAllTags.addEventListener('click', () => {
-        tagFilter.value = '';
-        currentFilter.tags = ['all'];
-        updateDisplay();
-    });
-
-    // Функция показа уведомления
-    function showToast(message) {
-        toast.textContent = message;
-        toast.classList.add('show');
-        setTimeout(() => {
-            toast.classList.remove('show');
-        }, 2000);
-    }
-
-    // Функция обработки файла
-    function processFile(file) {
-        if (!file.name.endsWith('.txt')) {
-            alert('Пожалуйста, выберите файл с расширением .txt');
-            return;
-        }
-
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const content = e.target.result;
-            parseFileContent(content);
-            filtersSection.classList.remove('hidden');
-            summarySection.classList.remove('hidden');
-        };
-        reader.readAsText(file);
-    }
-    // Функция парсинга содержимого файла (с объединением PM + репорт)
-    function parseFileContent(content) {
-        reportsData = [];
-        adminsData = {};
-
-        const lines = content.split('\n').map(l => l.trim()).filter(Boolean);
-
-        // ---- helpers ----
-        const toTs = (t) => {
-            // t = 'YYYY-MM-DD HH:MM:SS'
-            const [d, time] = t.split(' ');
-            const [Y,M,D] = d.split('-').map(Number);
-            const [h,m,s] = time.split(':').map(Number);
-            return new Date(Y, M-1, D, h, m, s).getTime();
-        };
-
-        const regex = /(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) Администратор (\S+) ответил на репорт (\S+): Вопрос: (.+?) \| Ответ: (.+)$/;
-        const pmRegex = /(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) Администратор (\S+) ответил в pm игроку (\S+): (.+) \(Чат\)$/;
-
-        // Сначала разбираем все строки в "черновые" репорты
-        const drafts = [];
-        lines.forEach(rawLine => {
-            let match = regex.exec(rawLine);
-            let isPM = false;
-            if (!match) {
-                match = pmRegex.exec(rawLine);
-                isPM = true;
-            }
-            if (!match) return;
-
-            const [, time, admin, player, question, answer] = match;
-            const textForTags = isPM ? question : answer;
-
-            drafts.push({
-                time,
-                ts: toTs(time),
-                admin,
-                player,
-                question: isPM ? '' : question,
-                answer: isPM ? question : answer,
-                isPM,
-                tags: determineTags(textForTags, isPM),
-                raw: rawLine
-            });
+      // 2) Игрок отправил в /report
+      m = rest.match(/^Игрок\s+(\S+)\s+отправил в \/report вопрос:\s*([\s\S]*?)\s*\(Очередь:\s*(\d+)\)\s*$/);
+      if (m){
+        pushRecord({
+          time, admin:null, player:m[1].replace(/^\[\d+\]/,''),
+          question:m[2].trim(), answer:'', type:'sent', queue:+m[3]
         });
+        continue;
+      }
 
-        // Сортируем по времени (на всякий)
-        drafts.sort((a,b)=>a.ts-b.ts);
-
-        // Объединяем пары "репорт + pm" в один репорт.
-        // Правило: один admin/player, разница <=1 сек, один isPM=false второй isPM=true.
-        const used = new Array(drafts.length).fill(false);
-
-        for (let i=0; i<drafts.length; i++){
-            if (used[i]) continue;
-            const a = drafts[i];
-
-            let merged = null;
-            let pairIndex = -1;
-
-            // ищем ближайшую пару впереди в пределах 1 сек
-            for (let j=i+1; j<drafts.length; j++){
-                if (used[j]) continue;
-                const b = drafts[j];
-                if (b.ts - a.ts > 1000) break; // дальше уже >1 сек
-
-                if (a.admin === b.admin && a.player === b.player && a.isPM !== b.isPM){
-                    // нашли пару
-                    pairIndex = j;
-
-                    const normal = a.isPM ? b : a;
-                    const pm = a.isPM ? a : b;
-
-                    merged = {
-                        time: normal.time,
-                        admin: normal.admin,
-                        player: normal.player,
-                        question: normal.question,
-                        answer: [normal.answer, pm.answer].filter(Boolean).join(' '),
-                        isPM: false,
-                        tags: Array.from(new Set([...(normal.tags||[]), ...(pm.tags||[])])),
-                        raw: `${normal.time} Администратор ${normal.admin} ответил на репорт ${normal.player}: Вопрос: ${normal.question} | Ответ: ${[normal.answer, pm.answer].filter(Boolean).join(' ')}`
-                    };
-                    used[j] = true;
-                    break;
-                }
-            }
-
-            used[i] = true;
-
-            const report = merged || {
-                time: a.time,
-                admin: a.admin,
-                player: a.player,
-                question: a.question,
-                answer: a.answer,
-                isPM: a.isPM,
-                tags: a.tags,
-                raw: a.raw
-            };
-
-            reportsData.push(report);
-
-            if (!adminsData[report.admin]) {
-                adminsData[report.admin] = {
-                    name: report.admin,
-                    reports: [],
-                    stats: {
-                        total: 0,
-                        observation: 0,
-                        solving: 0,
-                        chat: 0,
-                        transfer: 0,
-                        punishment: 0,
-                        instruction: 0
-                    }
-                };
-            }
-
-            adminsData[report.admin].reports.push(report);
-            adminsData[report.admin].stats.total++;
-
-            report.tags.forEach(tag => {
-                if (adminsData[report.admin].stats[tag] !== undefined) {
-                    adminsData[report.admin].stats[tag]++;
-                }
-            });
-        }
-
-        updateFilters();
-        updateSummary();
-        updateDisplay();
-    }
-
-
-    function determineTags(answer, isPM) {
-        const tags = [];
-        const lowerAnswer = answer.toLowerCase();
-
-        if (isPM) tags.push('chat');
-
-        if (lowerAnswer.includes('начинаю слежку') ||
-            lowerAnswer.includes('слежу') ||
-            lowerAnswer.includes('прослежу')) {
-            tags.push('observation');
-        }
-
-        if (lowerAnswer.includes('начинаю работать по вашей жалобе') ||
-            lowerAnswer.includes('работаю по жалобе') ||
-            lowerAnswer.includes('помогаю')) {
-            tags.push('solving');
-        }
-
-        if (lowerAnswer.includes('передал ваш репорт другим администраторам') ||
-            lowerAnswer.includes('передал репорт')) {
-            tags.push('transfer');
-        }
-
-        if (lowerAnswer.includes('наказан') ||
-            lowerAnswer.includes('накажем') ||
-            lowerAnswer.includes('мут') ||
-            lowerAnswer.includes('забанить')) {
-            tags.push('punishment');
-        }
-
-        if (lowerAnswer.includes('/') ||
-            lowerAnswer.includes('команда') ||
-            lowerAnswer.includes('нажмите') ||
-            lowerAnswer.includes('используйте')) {
-            tags.push('instruction');
-        }
-
-        return tags;
-    }
-
-    function updateFilters() {
-        while (adminFilter.options.length > 1) {
-            adminFilter.remove(1);
-        }
-
-        Object.keys(adminsData).forEach(admin => {
-            const option = document.createElement('option');
-            option.value = admin;
-            option.textContent = admin;
-            adminFilter.appendChild(option);
+      // 3) Отказ
+      m = rest.match(/^Администратор\s+(\S+)\s+отказался от репорта игрока\s+(\S+)\.\s*Вопрос:\s*([\s\S]*)$/);
+      if (m){
+        pushRecord({
+          time, admin:m[1], player:m[2].replace(/^\[\d+\]/,''),
+          question:m[3].trim(), answer:'❌ Отказ', type:'refused'
         });
-    }
+        continue;
+      }
 
-    function updateSummary() {
-        const totalReports = reportsData.length;
-        const totalAdmins = Object.keys(adminsData).length;
-
-        const tagCounts = {
-            observation: 0,
-            solving: 0,
-            chat: 0,
-            transfer: 0,
-            punishment: 0,
-            instruction: 0
-        };
-
-        reportsData.forEach(report => {
-            report.tags.forEach(tag => {
-                if (tagCounts[tag] !== undefined) tagCounts[tag]++;
-            });
+      // 4) Ответ в PM
+      m = rest.match(/^Администратор\s+(\S+)\s+ответил в pm игроку\s+(\S+):\s*([\s\S]*)$/);
+      if (m){
+        pushRecord({
+          time, admin:m[1], player:m[2].replace(/^\[\d+\]/,''),
+          question:'',
+          answer: m[3].replace(/\s*\((Чат|Диалог)\)\s*$/,'').trim(),
+          type:'pm'
         });
-
-        summaryGrid.innerHTML = `
-            <div class="summary-card">
-                <div class="summary-value">${totalReports}</div>
-                <div class="summary-label">Всего репортов</div>
-            </div>
-            <div class="summary-card">
-                <div class="summary-value">${totalAdmins}</div>
-                <div class="summary-label">Администраторов</div>
-            </div>
-            <div class="summary-card">
-                <div class="summary-value">${tagCounts.observation}</div>
-                <div class="summary-label">Наблюдений</div>
-            </div>
-            <div class="summary-card">
-                <div class="summary-value">${tagCounts.solving}</div>
-                <div class="summary-label">Решений жалоб</div>
-            </div>
-            <div class="summary-card">
-                <div class="summary-value">${tagCounts.chat}</div>
-                <div class="summary-label">Ответов в чат</div>
-            </div>
-            <div class="summary-card">
-                <div class="summary-value">${tagCounts.transfer}</div>
-                <div class="summary-label">Передач репортов</div>
-            </div>
-            <div class="summary-card">
-                <div class="summary-value">${tagCounts.punishment}</div>
-                <div class="summary-label">Наказаний</div>
-            </div>
-            <div class="summary-card">
-                <div class="summary-value">${tagCounts.instruction}</div>
-                <div class="summary-label">Инструкций</div>
-            </div>
-        `;
+        continue;
+      }
     }
 
-    function updateDisplay() {
-        adminCards.innerHTML = '';
+    reportsData.sort((a,b) => (a.time < b.time ? 1 : -1));
+    adminsData.sort((a,b) => b.count - a.count);
+    tagsData.sort((a,b) => b.count - a.count);
+  }
 
-        let filteredAdmins = {};
+  function pushRecord(rec){
+    rec.tags = extractTags((rec.question||'') + ' ' + (rec.answer||''));
+    reportsData.push(rec);
 
-        Object.keys(adminsData).forEach(adminName => {
-            if (currentFilter.admins.length > 0 && !currentFilter.admins.includes('all') &&
-                !currentFilter.admins.includes(adminName)) {
-                return;
-            }
+    if (rec.admin){
+      const found = adminsData.find(a => a.name === rec.admin);
+      if (found) found.count++; else adminsData.push({name:rec.admin, count:1});
+    }
+    rec.tags.forEach(t => {
+      const found = tagsData.find(x => x.name === t);
+      if (found) found.count++; else tagsData.push({name:t, count:1});
+    });
+  }
 
-            const admin = adminsData[adminName];
-            const filteredReports = admin.reports.filter(report => {
-                if (currentFilter.tags.length > 0 && !currentFilter.tags.includes('all')) {
-                    const hasMatchingTag = report.tags.some(tag => currentFilter.tags.includes(tag));
-                    if (!hasMatchingTag) return false;
-                }
+  // ===== Фильтрация =====
+  function applyFilters(){
+    const type = typeFilter.value;
+    const admin = adminFilter.value;
+    const tag = tagFilter.value;
+    const q = searchFilter.value.trim().toLowerCase();
 
-                if (currentFilter.search) {
-                    const searchText = currentFilter.search;
-                    const searchableText = (
-                        report.player + ' ' +
-                        report.question + ' ' +
-                        report.answer
-                    ).toLowerCase();
-                    if (!searchableText.includes(searchText)) return false;
-                }
-                return true;
-            });
+    return reportsData.filter(r => {
+      if (type && r.type !== type) return false;
+      if (admin && r.admin !== admin) return false;
+      if (tag && !r.tags.includes(tag)) return false;
+      if (q){
+        const hay = ((r.question||'') + ' ' + (r.answer||'') + ' ' + (r.player||'')).toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }
 
-            if (filteredReports.length > 0) {
-                filteredAdmins[adminName] = {
-                    ...admin,
-                    reports: filteredReports
-                };
-            }
+  // ===== Общий рендер =====
+  function renderAll(){
+    $('totalReports').textContent = reportsData.length;
+    $('totalAnswers').textContent = reportsData.filter(r => r.type === 'answer').length;
+    $('totalSent').textContent    = reportsData.filter(r => r.type === 'sent').length;
+    $('totalAdmins').textContent  = adminsData.length;
+    $('uniqueTags').textContent   = tagsData.length;
+
+    adminFilter.innerHTML = '<option value="">Все администраторы</option>';
+    adminsData.forEach(a => {
+      adminFilter.innerHTML += `<option value="${escapeAttr(a.name)}">${escapeHtml(a.name)} (${a.count})</option>`;
+    });
+    adminFilter.value = currentAdmin || '';
+
+    tagFilter.innerHTML = '<option value="">Все теги</option>';
+    tagsData.forEach(t => {
+      tagFilter.innerHTML += `<option value="${escapeAttr(t.name)}">${escapeHtml(t.name)} (${t.count})</option>`;
+    });
+    tagFilter.value = currentTag || '';
+
+    renderAdmins();
+    renderTags();
+    renderChart();
+    renderReports();
+  }
+
+  function renderAdmins(){
+    const box = $('adminCards');
+    box.innerHTML = '';
+    if (!adminsData.length){ box.innerHTML = '<div style="color:#8e8e9f">Нет данных</div>'; return; }
+    adminsData.forEach(a => {
+      const div = document.createElement('div');
+      div.className = 'admin-card' + (currentAdmin === a.name ? ' active' : '');
+      div.innerHTML = `
+        <div class="admin-name">${escapeHtml(a.name)}</div>
+        <div class="admin-count">${a.count}</div>
+        <div class="admin-sub">ответов обработано</div>`;
+      div.addEventListener('click', () => {
+        currentAdmin = currentAdmin === a.name ? null : a.name;
+        renderAll();
+      });
+      box.appendChild(div);
+    });
+  }
+
+  function renderTags(){
+    const box = $('tagCards');
+    box.innerHTML = '';
+    if (!tagsData.length){ box.innerHTML = '<div style="color:#8e8e9f">Нет тегов</div>'; return; }
+    tagsData.slice(0, 30).forEach(t => {
+      const div = document.createElement('div');
+      div.className = 'tag-card' + (currentTag === t.name ? ' active' : '');
+      div.innerHTML = `
+        <div class="tag-name">${escapeHtml(t.name)}</div>
+        <div class="tag-count">${t.count}</div>
+        <div class="tag-sub">упоминаний</div>`;
+      div.addEventListener('click', () => {
+        currentTag = currentTag === t.name ? null : t.name;
+        renderAll();
+      });
+      box.appendChild(div);
+    });
+  }
+
+  function renderReports(){
+    const list = applyFilters();
+    const box = $('reportsContainer');
+    $('shownCount').textContent = `— показано ${list.length} из ${reportsData.length}`;
+    box.innerHTML = '';
+
+    if (!list.length){
+      box.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">🔍</div>
+          <h3>Записи не найдены</h3>
+          <p>Измените параметры фильтрации или загрузите другой файл</p>
+        </div>`;
+      return;
+    }
+
+    const MAX_RENDER = 500;
+    const toShow = list.slice(0, MAX_RENDER);
+
+    toShow.forEach(r => {
+      const item = document.createElement('div');
+      item.className = 'report-item type-' + r.type;
+
+      let badges = '';
+      if (r.type === 'sent')    badges += `<span class="report-badge badge-sent">📤 отправлен</span>`;
+      if (r.type === 'refused') badges += `<span class="report-badge badge-refused">❌ отказ</span>`;
+      if (r.type === 'pm')      badges += `<span class="report-badge badge-pm">💬 PM</span>`;
+      if (r.type === 'answer')  badges += `<span class="report-badge">✅ ответ</span>`;
+      if (r.queue !== undefined) badges += `<span class="report-badge">Очередь: ${r.queue}</span>`;
+
+      const adminBadge = r.admin ? `<span class="report-admin">${escapeHtml(r.admin)}</span>` : '';
+      const playerLine = r.player ? `<div class="report-player">Игрок: ${escapeHtml(r.player)}</div>` : '';
+      const questionBlock = r.question ? `<div class="report-question"><strong>Вопрос:</strong> ${escapeHtml(r.question)}</div>` : '';
+      const answerBlock = r.answer ? `<div class="report-answer"><strong>${r.type==='pm'?'Сообщение':'Ответ'}:</strong> ${escapeHtml(r.answer)}</div>` : '';
+      const tagsBlock = r.tags.length
+        ? `<div class="report-tags">${r.tags.map(t => `<span class="report-tag" data-tag="${escapeAttr(t)}">${escapeHtml(t)}</span>`).join('')}</div>`
+        : '';
+
+      item.innerHTML = `
+        <div class="report-header">
+          <div class="report-time">${r.time}</div>
+          <div class="report-badges">${adminBadge}${badges}</div>
+        </div>
+        ${playerLine}
+        ${questionBlock}
+        ${answerBlock}
+        ${tagsBlock}`;
+
+      item.querySelectorAll('.report-tag').forEach(el => {
+        el.addEventListener('click', () => {
+          const tg = el.getAttribute('data-tag');
+          currentTag = currentTag === tg ? null : tg;
+          renderAll();
         });
+      });
 
-        Object.values(filteredAdmins).forEach(admin => {
-            const adminCard = document.createElement('div');
-            adminCard.className = 'admin-card';
-
-            const adminHeader = document.createElement('div');
-            adminHeader.className = 'admin-header';
-
-            const adminName = document.createElement('div');
-            adminName.className = 'admin-name';
-            adminName.textContent = admin.name;
-
-            const reportCount = document.createElement('div');
-            reportCount.className = 'report-count';
-            reportCount.textContent = admin.reports.length;
-
-            adminHeader.appendChild(adminName);
-            adminHeader.appendChild(reportCount);
-
-            const adminStats = document.createElement('div');
-            adminStats.className = 'admin-stats';
-
-            const tagStats = { observation: 0, solving: 0, chat: 0 };
-
-            admin.reports.forEach(report => {
-                report.tags.forEach(tag => {
-                    if (tagStats[tag] !== undefined) tagStats[tag]++;
-                });
-            });
-
-            adminStats.innerHTML = `
-                <div class="stat-item">
-                    <div class="stat-value">${tagStats.observation}</div>
-                    <div class="stat-label">Наблюдений</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-value">${tagStats.solving}</div>
-                    <div class="stat-label">Решений</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-value">${tagStats.chat}</div>
-                    <div class="stat-label">Чатов</div>
-                </div>
-            `;
-
-            const reportsList = document.createElement('div');
-            reportsList.className = 'reports-list';
-
-            admin.reports.forEach(report => {
-                const reportItem = document.createElement('div');
-                reportItem.className = 'report-item';
-
-                const reportTime = document.createElement('div');
-                reportTime.className = 'report-time';
-                reportTime.textContent = report.time;
-
-                const reportPlayer = document.createElement('div');
-                reportPlayer.className = 'report-player';
-                reportPlayer.textContent = report.player || 'PM';
-
-                const reportQuestion = document.createElement('div');
-                reportQuestion.className = 'report-question';
-                reportQuestion.textContent = report.question || '(Личное сообщение)';
-
-                const reportAnswer = document.createElement('div');
-                reportAnswer.className = 'report-answer';
-                reportAnswer.textContent = report.answer;
-
-                const reportTags = document.createElement('div');
-                reportTags.className = 'report-tags';
-
-                report.tags.forEach(tag => {
-                    const tagElement = document.createElement('span');
-                    tagElement.className = `tag tag-${tag}`;
-
-                    const tagNames = {
-                        observation: 'Наблюдение',
-                        solving: 'Решение',
-                        chat: 'Чат',
-                        transfer: 'Передача',
-                        punishment: 'Наказание',
-                        instruction: 'Инструкция'
-                    };
-
-                    tagElement.textContent = tagNames[tag] || tag;
-                    reportTags.appendChild(tagElement);
-                });
-
-                reportItem.appendChild(reportTime);
-                reportItem.appendChild(reportPlayer);
-
-                if (report.question) reportItem.appendChild(reportQuestion);
-
-                reportItem.appendChild(reportAnswer);
-                reportItem.appendChild(reportTags);
-
-                reportItem.addEventListener('dblclick', () => {
-                    copyToClipboard(report.raw);
-                    reportItem.classList.add('copied');
-                    setTimeout(() => reportItem.classList.remove('copied'), 1000);
-                    showToast('Исходная строка скопирована в буфер обмена');
-                });
-
-                reportsList.appendChild(reportItem);
-            });
-
-            adminCard.appendChild(adminHeader);
-            adminCard.appendChild(adminStats);
-            adminCard.appendChild(reportsList);
-
-            adminCards.appendChild(adminCard);
-        });
-    }
-
-    function copyToClipboard(text) {
-        const textarea = document.createElement('textarea');
-        textarea.value = text;
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textarea);
-    }
-
-    /* ===================================================
-       ✅ НОВЫЙ ФУНКЦИОНАЛ: календарь → команда → ВК (B)
-       =================================================== */
-
-    // Открыть модалку
-    openDateModalBtn.addEventListener("click", () => {
-        modal.classList.add("show");
-
-        const today = new Date();
-        const yyyy = today.getFullYear();
-        const mm = String(today.getMonth() + 1).padStart(2, '0');
-        const dd = String(today.getDate()).padStart(2, '0');
-        datePicker.value = `${yyyy}-${mm}-${dd}`;
+      box.appendChild(item);
     });
 
-    // Закрыть модалку
-    function closeModalInstant() {
-        modal.classList.remove("show");
+    if (list.length > MAX_RENDER){
+      const note = document.createElement('div');
+      note.style.cssText = 'text-align:center;color:#8e8e9f;padding:15px;font-size:.9rem';
+      note.textContent = `Показаны первые ${MAX_RENDER} из ${list.length}. Уточните фильтры для сужения выборки.`;
+      box.appendChild(note);
+    }
+  }
+
+  // ===== График =====
+  const CHART_W = 1000;
+  const CHART_H = 320;
+  const PAD = { top: 34, right: 24, bottom: 44, left: 56 };
+
+  const TYPE_LABELS = { answer:'Ответы', sent:'Отправленные', refused:'Отказы', pm:'PM' };
+  const TYPE_COLORS = { answer:'#73bf69', sent:'#f2cc0c', refused:'#f2495c', pm:'#b877d9' };
+
+  function buildTimeData(list){
+    if (!list.length) return { labels:[], stacks:[], summary:'' };
+
+    const dates = [...new Set(list.map(r => r.time.substring(0,10)))];
+    const multiDay = dates.length > 1;
+
+    const stacks = [
+      { key:'answer',  label:TYPE_LABELS.answer,  color:TYPE_COLORS.answer,  values:[] },
+      { key:'sent',    label:TYPE_LABELS.sent,    color:TYPE_COLORS.sent,    values:[] },
+      { key:'refused', label:TYPE_LABELS.refused, color:TYPE_COLORS.refused, values:[] },
+      { key:'pm',      label:TYPE_LABELS.pm,      color:TYPE_COLORS.pm,      values:[] }
+    ];
+
+    if (!multiDay){
+      const counts = { answer:Array(24).fill(0), sent:Array(24).fill(0), refused:Array(24).fill(0), pm:Array(24).fill(0) };
+      list.forEach(r => {
+        const h = parseInt(r.time.substring(11,13), 10);
+        if (!isNaN(h) && counts[r.type]) counts[r.type][h]++;
+      });
+      const labels = Array.from({length:24}, (_,i) => String(i).padStart(2,'0') + ':00');
+      stacks.forEach(s => s.values = counts[s.key]);
+
+      // Пик активности
+      const totals = labels.map((_,i) => stacks.reduce((sum,s)=>sum+s.values[i], 0));
+      const peakIdx = totals.indexOf(Math.max(...totals));
+      const summary = `Максимум активности: <b>${labels[peakIdx]}</b> — ${totals[peakIdx]} записей. Всего часов с активностью: <b>${totals.filter(v=>v>0).length}</b>.`;
+
+      return { labels, stacks, summary };
+    } else {
+      const sorted = [...dates].sort();
+      const counts = { answer:{}, sent:{}, refused:{}, pm:{} };
+      list.forEach(r => {
+        const d = r.time.substring(0,10);
+        if (counts[r.type]) counts[r.type][d] = (counts[r.type][d]||0) + 1;
+      });
+      stacks.forEach(s => s.values = sorted.map(d => counts[s.key][d] || 0));
+
+      const totals = sorted.map((_,i) => stacks.reduce((sum,s)=>sum+s.values[i], 0));
+      const peakIdx = totals.indexOf(Math.max(...totals));
+      const summary = `Максимум активности: <b>${sorted[peakIdx]}</b> — ${totals[peakIdx]} записей. Дней в отчёте: <b>${sorted.length}</b>.`;
+
+      return { labels: sorted, stacks, summary };
+    }
+  }
+
+  function buildTypeData(list){
+    const counts = { answer:0, sent:0, refused:0, pm:0 };
+    list.forEach(r => { if (counts[r.type] !== undefined) counts[r.type]++; });
+
+    const order = ['answer','sent','refused','pm'];
+    const labels = order.map(k => TYPE_LABELS[k]);
+    const values = order.map(k => counts[k]);
+    const colors = order.map(k => TYPE_COLORS[k]);
+
+    const stacks = [{ key:'value', label:'Записей', color:'#5794f2', values }];
+
+    const total = values.reduce((a,b)=>a+b,0) || 1;
+    const summary = order.map((k,i) =>
+      `<b style="color:${colors[i]}">${TYPE_LABELS[k]}</b>: ${values[i]} (${Math.round(values[i]/total*100)}%)`
+    ).join(' · ');
+
+    return { labels, stacks, colors, summary };
+  }
+
+  function buildAdminsData(list){
+    const map = {};
+    list.forEach(r => { if (r.admin) map[r.admin] = (map[r.admin]||0) + 1; });
+    const sorted = Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0, 15);
+    return {
+      labels: sorted.map(([n]) => n),
+      stacks: [{ key:'value', label:'Ответов', color:'#5794f2', values: sorted.map(([,c]) => c) }],
+      colors: sorted.map(() => '#5794f2'),
+      horizontal: true,
+      summary: sorted.length ? `Топ-1: <b>${escapeHtml(sorted[0][0])}</b> — ${sorted[0][1]} ответов.` : ''
+    };
+  }
+
+  function renderChart(){
+    const list = applyFilters();
+    let data;
+    if (chartMode === 'time')        data = buildTimeData(list);
+    else if (chartMode === 'type')   data = buildTypeData(list);
+    else                             data = buildAdminsData(list);
+
+    chartSvg.innerHTML = '';
+    chartTip.style.display = 'none';
+    chartLegend.innerHTML = '';
+    chartSummary.innerHTML = data.summary || '';
+
+    // Легенда
+    if (chartMode !== 'admins'){
+      data.stacks.forEach(s => {
+        const item = document.createElement('div');
+        item.className = 'chart-legend-item';
+        item.innerHTML = `<span class="chart-legend-dot" style="background:${s.color}"></span>${escapeHtml(s.label)}`;
+        chartLegend.appendChild(item);
+      });
     }
 
-    closeModalBtn.addEventListener("click", closeModalInstant);
+    if (!list.length || !data.labels.length){
+      // Пусто
+      const txt = document.createElementNS(SVG_NS, 'text');
+      txt.setAttribute('x', CHART_W/2);
+      txt.setAttribute('y', CHART_H/2);
+      txt.setAttribute('text-anchor', 'middle');
+      txt.setAttribute('font-size', '16');
+      txt.setAttribute('fill', '#8e8e9f');
+      txt.textContent = 'Нет данных для отображения';
+      chartSvg.appendChild(txt);
+      return;
+    }
 
-    // Подтверждение даты
-    confirmDateBtn.addEventListener("click", async () => {
-        const date = datePicker.value;
-        if (!date) {
-            showToast("Выберите дату");
-            return;
-        }
+    if (data.horizontal){
+      renderHorizontalBars(data);
+    } else {
+      renderVerticalBars(data);
+    }
+  }
 
-        const command = `!uploadreports ${date}`;
+  function renderVerticalBars(data){
+    const plotW = CHART_W - PAD.left - PAD.right;
+    const plotH = CHART_H - PAD.top - PAD.bottom;
 
-        // мгновенно закрываем модалку
-        closeModalInstant();
+    // Макс. высота столбца = сумма всех слоёв стека (а не максимум одного слоя)
+    let maxVal = 1;
+    data.labels.forEach((_, i) => {
+      const total = data.stacks.reduce((sum, st) => sum + (st.values[i] || 0), 0);
+      if (total > maxVal) maxVal = total;
+    });
+    // Округление вверх
+    const step = niceStep(maxVal);
+    const yMax = Math.ceil(maxVal / step) * step;
+    const ySteps = yMax / step;
 
-        try {
-            await navigator.clipboard.writeText(command);
-            showToast("Команда скопирована. Открываю чат ВК...");
-        } catch (e) {
-            alert("Не удалось скопировать команду. Скопируй вручную: " + command);
-        }
+    // Горизонтальные линии и подписи Y
+    for (let i=0; i<=ySteps; i++){
+      const val = step * i;
+      const y = PAD.top + plotH - (val/yMax) * plotH;
 
-        window.open(VK_CHAT_URL, "_blank");
+      const line = document.createElementNS(SVG_NS, 'line');
+      line.setAttribute('x1', PAD.left);
+      line.setAttribute('x2', CHART_W - PAD.right);
+      line.setAttribute('y1', y);
+      line.setAttribute('y2', y);
+      line.setAttribute('stroke', 'rgba(204,204,220,.10)');
+      if (i>0) line.setAttribute('stroke-dasharray', '4 4');
+      chartSvg.appendChild(line);
+
+      const tx = document.createElementNS(SVG_NS, 'text');
+      tx.setAttribute('x', PAD.left - 8);
+      tx.setAttribute('y', y + 4);
+      tx.setAttribute('text-anchor', 'end');
+      tx.setAttribute('font-size', '11');
+      tx.setAttribute('fill', '#8e8e9f');
+      tx.textContent = val;
+      chartSvg.appendChild(tx);
+    }
+
+    const n = data.labels.length;
+    const groupW = plotW / n;
+    const barW = Math.max(3, Math.min(groupW * 0.72, 44));
+
+    data.labels.forEach((label, i) => {
+      const xCenter = PAD.left + groupW * (i + 0.5);
+      let yBottom = PAD.top + plotH;
+      let totalForColumn = 0;
+
+      data.stacks.forEach((stack, sIdx) => {
+        const val = stack.values[i] || 0;
+        totalForColumn += val;
+        if (val <= 0) return;
+        const h = (val / yMax) * plotH;
+        const y = yBottom - h;
+
+        const rect = document.createElementNS(SVG_NS, 'rect');
+        rect.setAttribute('x', xCenter - barW/2);
+        rect.setAttribute('y', y);
+        rect.setAttribute('width', barW);
+        rect.setAttribute('height', h);
+        rect.setAttribute('rx', Math.min(3, barW/4));
+        const fill = (data.colors && data.colors[i]) || stack.color;
+        rect.setAttribute('fill', fill);
+        rect.setAttribute('class', 'chart-bar');
+        rect.setAttribute('data-tip', `${label}\n${stack.label}: ${val}`);
+
+        chartSvg.appendChild(rect);
+        yBottom = y;
+      });
+
+      // Подпись X — прореживаем
+      const skip = n > 16 ? Math.ceil(n/12) : 1;
+      if (i % skip === 0 || n <= 16){
+        const tx = document.createElementNS(SVG_NS, 'text');
+        tx.setAttribute('x', xCenter);
+        tx.setAttribute('y', CHART_H - PAD.bottom + 18);
+        tx.setAttribute('text-anchor', 'middle');
+        tx.setAttribute('font-size', '11');
+        tx.setAttribute('fill', '#8e8e9f');
+        // Для часовых меток укоротим
+        tx.textContent = label.length > 10 ? label.substring(5) : label;
+        chartSvg.appendChild(tx);
+      }
     });
 
-    // Закрытие по клику вне окна
-    modal.addEventListener("click", (e) => {
-        if (e.target === modal) closeModalInstant();
+    attachBarsTooltip();
+  }
+
+  // Приблизительная ширина текста в px для данного шрифта/размера (без DOM-измерений)
+  function estimateTextWidth(text, fontSize){
+    return String(text).length * fontSize * 0.6;
+  }
+
+  function renderHorizontalBars(data){
+    const stack = data.stacks[0];
+    const labels = data.labels;
+    const colors = data.colors || [stack.color];
+    const n = labels.length;
+
+    // Обрезаем слишком длинные имена (в символах), но оставляем достаточно, чтобы было читаемо
+    const MAX_LABEL_CHARS = 22;
+    const shortLabels = labels.map(l => l.length > MAX_LABEL_CHARS ? l.slice(0, MAX_LABEL_CHARS - 1) + '…' : l);
+
+    // Динамический левый отступ под самую длинную подпись
+    const longest = shortLabels.reduce((a,b) => a.length > b.length ? a : b, '');
+    const labelFontSize = 12;
+    const padLeft = Math.min(220, Math.max(70, estimateTextWidth(longest, labelFontSize) + 24));
+
+    // Правый отступ под подпись значения (нужен запас для 3-4 значных чисел)
+    const padRight = 46;
+    const hPad = { top: 20, right: padRight, bottom: 34, left: padLeft };
+
+    // Динамическая высота под количество элементов
+    const rowH = Math.max(24, Math.min(34, 420/n));
+    const plotH = rowH * n;
+    const fullH = plotH + hPad.top + hPad.bottom;
+    chartSvg.setAttribute('viewBox', `0 0 ${CHART_W} ${fullH}`);
+    chartSvg.style.minHeight = 'auto';
+
+    const plotW = CHART_W - hPad.left - hPad.right;
+    const maxVal = Math.max(1, ...stack.values);
+    const step = niceStep(maxVal);
+    const xMax = Math.ceil(maxVal / step) * step;
+    const xSteps = xMax / step;
+
+    // Вертикальные линии
+    for (let i=0; i<=xSteps; i++){
+      const val = step * i;
+      const x = hPad.left + (val/xMax) * plotW;
+
+      const line = document.createElementNS(SVG_NS, 'line');
+      line.setAttribute('x1', x);
+      line.setAttribute('x2', x);
+      line.setAttribute('y1', hPad.top);
+      line.setAttribute('y2', hPad.top + plotH);
+      line.setAttribute('stroke', 'rgba(204,204,220,.10)');
+      if (i>0) line.setAttribute('stroke-dasharray', '4 4');
+      chartSvg.appendChild(line);
+
+      const tx = document.createElementNS(SVG_NS, 'text');
+      tx.setAttribute('x', x);
+      tx.setAttribute('y', hPad.top + plotH + 20);
+      tx.setAttribute('text-anchor', 'middle');
+      tx.setAttribute('font-size', '11');
+      tx.setAttribute('fill', '#8e8e9f');
+      tx.textContent = val;
+      chartSvg.appendChild(tx);
+    }
+
+    labels.forEach((label, i) => {
+      const y = hPad.top + i * rowH + rowH*0.16;
+      const h = rowH * 0.68;
+      const val = stack.values[i] || 0;
+      const w = (val / xMax) * plotW;
+
+      const rect = document.createElementNS(SVG_NS, 'rect');
+      rect.setAttribute('x', hPad.left);
+      rect.setAttribute('y', y);
+      rect.setAttribute('width', Math.max(1, w));
+      rect.setAttribute('height', h);
+      rect.setAttribute('rx', 4);
+      rect.setAttribute('fill', colors[i] || stack.color);
+      rect.setAttribute('class', 'chart-bar');
+      rect.setAttribute('data-tip', `${label}\nОтветов: ${val}`);
+      chartSvg.appendChild(rect);
+
+      // Имя слева — не обрезаем координаты за пределы viewBox
+      const tx = document.createElementNS(SVG_NS, 'text');
+      tx.setAttribute('x', hPad.left - 10);
+      tx.setAttribute('y', y + h/2 + 4);
+      tx.setAttribute('text-anchor', 'end');
+      tx.setAttribute('font-size', labelFontSize);
+      tx.setAttribute('fill', '#ccccdc');
+      tx.textContent = shortLabels[i];
+      const titleEl = document.createElementNS(SVG_NS, 'title');
+      titleEl.textContent = label;
+      tx.appendChild(titleEl);
+      chartSvg.appendChild(tx);
+
+      // Значение — справа от бара, либо внутри бара если не хватает места до края
+      const valTx = document.createElementNS(SVG_NS, 'text');
+      const spaceLeft = CHART_W - hPad.right - (hPad.left + w);
+      let valX, anchor, fill;
+      if (spaceLeft > 30){
+        valX = hPad.left + w + 8; anchor = 'start'; fill = '#9fa7b3';
+      } else {
+        valX = hPad.left + w - 8; anchor = 'end'; fill = '#fff';
+      }
+      valTx.setAttribute('x', valX);
+      valTx.setAttribute('y', y + h/2 + 4);
+      valTx.setAttribute('text-anchor', anchor);
+      valTx.setAttribute('font-size', '11');
+      valTx.setAttribute('font-weight', '600');
+      valTx.setAttribute('fill', fill);
+      valTx.textContent = val;
+      chartSvg.appendChild(valTx);
     });
-  </script>
+
+    attachBarsTooltip();
+  }
+
+  function attachBarsTooltip(){
+    const wrap = chartSvg.parentElement;
+    chartSvg.querySelectorAll('.chart-bar').forEach(bar => {
+      bar.style.cursor = 'default';
+      bar.addEventListener('mouseenter', e => {
+        const rect = wrap.getBoundingClientRect();
+        chartTip.textContent = bar.getAttribute('data-tip');
+        chartTip.style.display = 'block';
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        chartTip.style.left = x + 'px';
+        chartTip.style.top = (y - 6) + 'px';
+      });
+      bar.addEventListener('mousemove', e => {
+        const rect = wrap.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        chartTip.style.left = x + 'px';
+        chartTip.style.top = (y - 6) + 'px';
+      });
+      bar.addEventListener('mouseleave', () => {
+        chartTip.style.display = 'none';
+      });
+    });
+  }
+
+  function niceStep(max){
+    if (max <= 5) return 1;
+    if (max <= 10) return 2;
+    if (max <= 25) return 5;
+    if (max <= 50) return 10;
+    if (max <= 100) return 20;
+    if (max <= 250) return 50;
+    if (max <= 500) return 100;
+    if (max <= 1000) return 200;
+    if (max <= 5000) return 1000;
+    return Math.pow(10, Math.floor(Math.log10(max)) - 1);
+  }
+
+  // ===== Обработчики фильтров =====
+  typeFilter.addEventListener('change', () => { renderChart(); renderReports(); });
+  adminFilter.addEventListener('change', e => { currentAdmin = e.target.value || null; renderAdmins(); renderChart(); renderReports(); });
+  tagFilter.addEventListener('change', e => { currentTag = e.target.value || null; renderTags(); renderChart(); renderReports(); });
+  searchFilter.addEventListener('input', () => { renderChart(); renderReports(); });
+
+  // Ресайз — сбросим viewBox у горизонтального режима
+  window.addEventListener('resize', () => {
+    if (chartMode !== 'admins'){
+      chartSvg.setAttribute('viewBox', `0 0 ${CHART_W} ${CHART_H}`);
+      chartSvg.style.minHeight = '280px';
+    }
+    renderChart();
+  });
+
+  // ===== Утилиты =====
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    })[c]);
+  }
+  function escapeAttr(s){
+    return String(s).replace(/["\\]/g, '\\$&');
+  }
+})();
+</script>
 </body>
 </html>
